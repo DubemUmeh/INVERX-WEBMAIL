@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Loader2, Save, Mail } from "lucide-react";
+import { Loader2, Save, Mail, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,6 +12,18 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { domainsApi } from "@/lib/api/domains";
 import { settingsApi, ProfileData } from "@/lib/api/settings";
 import { toast } from "sonner";
@@ -75,8 +87,30 @@ export default function GeneralSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-48" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+          <Skeleton className="h-10 w-36" />
+        </div>
+        {[1, 2].map((i) => (
+          <div key={i} className="rounded-lg border p-6 space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-64" />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -196,6 +230,59 @@ export default function GeneralSettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 3. Danger Zone */}
+      <Card className="border-red-500/30 bg-red-500/5">
+        <CardHeader>
+          <CardTitle className="text-red-500">Danger Zone</CardTitle>
+          <CardDescription className="text-red-200/60">
+            Irreversible actions for your account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Delete Account</p>
+              <p className="text-xs text-neutral-500">
+                Permanently delete your account and all associated data.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Account
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you absolutely sure? This action cannot be undone. This will permanently delete your account and remove all of your data from our servers, including:
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>All domains and DNS configurations</li>
+                      <li>All email addresses and aliases</li>
+                      <li>All messages and attachments</li>
+                      <li>All API keys and integrations</li>
+                    </ul>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() => {
+                      toast.error("Account deletion is not yet implemented");
+                    }}
+                  >
+                    Yes, Delete My Account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>

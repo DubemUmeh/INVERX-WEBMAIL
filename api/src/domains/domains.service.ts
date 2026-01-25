@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { DomainsRepository } from './domains.repository.js';
 import { DomainVerificationService } from './domain-verification.service.js';
+import { SesVerificationService } from './ses/ses-verification.service.js';
+import { SesSyncService } from './ses/ses-sync.service.js';
 import {
   CreateDomainDto,
   CreateAddressDto,
@@ -17,6 +19,8 @@ export class DomainsService {
   constructor(
     private domainsRepository: DomainsRepository,
     private domainVerificationService: DomainVerificationService,
+    private sesVerificationService: SesVerificationService,
+    private sesSyncService: SesSyncService,
   ) {}
 
   async getDomains(accountId: string, query: DomainQueryDto) {
@@ -54,17 +58,47 @@ export class DomainsService {
         name: domainName,
       });
 
-      const dnsInstructions =
-        this.domainVerificationService.generateDnsSetupInstructions(domainName);
+      // 1. Verify Domain Identity with SES
+      const verificationToken =
+        await this.sesVerificationService.verifyDomainIdentity(domainName);
 
-      await this.saveDnsRecords(domain.id, domainName, dnsInstructions);
+      // 2. Get DKIM Tokens
+      const dkimTokens =
+        await this.sesVerificationService.getDkimTokens(domainName);
+
+      // 3. Construct DNS Records
+      const dnsRecords: any = {
+        spf: {
+          type: 'TXT',
+          name: domainName,
+          value: 'v=spf1 include:amazonses.com ~all',
+        },
+        dkim: dkimTokens.map((token) => ({
+          type: 'CNAME',
+          name: `${token}._domainkey.${domainName}`,
+          value: `${token}.dkim.amazonses.com`,
+        })),
+        verification: {
+          type: 'TXT',
+          name: `_amazonses.${domainName}`,
+          value: verificationToken,
+        },
+        mx: {
+          type: 'MX',
+          name: domainName,
+          value: `inbound-smtp.${process.env.AWS_SES_REGION || 'us-east-1'}.amazonaws.com`,
+          priority: 10,
+        },
+      };
+
+      await this.saveSesDnsRecords(domain.id, domainName, dnsRecords);
 
       return {
         id: domain.id,
         name: domain.name,
         status: 'pending',
         verificationStatus: 'unverified',
-        dnsRecords: dnsInstructions,
+        dnsRecords,
         createdAt: domain.createdAt,
       };
     } catch (error: any) {
@@ -84,36 +118,17 @@ export class DomainsService {
   async verifyDomain(accountId: string, idOrName: string) {
     const domain = await this.getDomain(accountId, idOrName);
 
-    const verificationResult =
-      await this.domainVerificationService.verifyAndUpdateDomain(
-        domain.id,
-        domain.name,
-      );
+    const syncResult = await this.sesSyncService.syncDomainStatus(domain.id);
 
+    // Get current records to display status
     return {
       domainId: domain.id,
       domain: domain.name,
-      verified: verificationResult.overallValid,
-      spf: {
-        valid: verificationResult.spf.valid,
-        message: verificationResult.spf.reason,
-        record: verificationResult.spf.record,
-      },
-      dkim: {
-        valid: verificationResult.dkim.valid,
-        message: verificationResult.dkim.reason,
-        record: verificationResult.dkim.record,
-      },
-      dmarc: {
-        valid: verificationResult.dmarc.valid,
-        message: verificationResult.dmarc.reason,
-        record: verificationResult.dmarc.record,
-        policy: verificationResult.dmarc.policy,
-      },
-      checkedAt: verificationResult.checkedAt,
-      message: verificationResult.overallValid
+      verified: syncResult?.verified || false,
+      status: syncResult?.status,
+      message: syncResult?.verified
         ? 'Domain verified successfully! You can now create email addresses.'
-        : 'DNS verification incomplete. Please ensure all required records are configured.',
+        : 'Domain verification pending. Please check your DNS records.',
     };
   }
 
@@ -122,32 +137,14 @@ export class DomainsService {
     const storedRecords = await this.domainsRepository.findDnsRecords(
       domain.id,
     );
-    const instructions =
-      this.domainVerificationService.generateDnsSetupInstructions(domain.name);
-
     return {
       domain: domain.name,
-      requiredRecords: instructions,
       storedRecords,
     };
   }
 
   async checkDns(accountId: string, idOrName: string) {
-    const domain = await this.getDomain(accountId, idOrName);
-    const status = await this.domainVerificationService.verifyDomain(
-      domain.name,
-    );
-
-    return {
-      domain: domain.name,
-      status: {
-        spf: status.spf,
-        dkim: status.dkim,
-        dmarc: status.dmarc,
-      },
-      overallValid: status.overallValid,
-      checkedAt: status.checkedAt,
-    };
+    return this.verifyDomain(accountId, idOrName);
   }
 
   async getAddresses(accountId: string, idOrName: string) {
@@ -189,43 +186,59 @@ export class DomainsService {
     return { message: 'Address deleted successfully' };
   }
 
-  private async saveDnsRecords(
+  private async saveSesDnsRecords(
     domainId: string,
     domainName: string,
-    instructions: ReturnType<
-      DomainVerificationService['generateDnsSetupInstructions']
-    >,
+    records: any,
   ) {
-    await Promise.all([
-      this.domainsRepository.createDnsRecord({
-        domainId,
-        type: instructions.spf.type,
-        name: instructions.spf.name,
-        value: instructions.spf.value,
-      }),
-      this.domainsRepository.createDnsRecord({
-        domainId,
-        type: instructions.dkim.type,
-        name: instructions.dkim.name,
-        value: instructions.dkim.value,
-      }),
-      this.domainsRepository.createDnsRecord({
-        domainId,
-        type: instructions.dmarc.type,
-        name: instructions.dmarc.name,
-        value: instructions.dmarc.value,
-      }),
-    ]);
+    const promises: Promise<any>[] = [];
 
-    if (instructions.mx) {
-      await this.domainsRepository.createDnsRecord({
+    // SPF
+    promises.push(
+      this.domainsRepository.createDnsRecord({
         domainId,
-        type: instructions.mx.type,
-        name: instructions.mx.name,
-        value: instructions.mx.value,
-        priority: instructions.mx.priority,
-      });
+        type: records.spf.type,
+        name: records.spf.name,
+        value: records.spf.value,
+      }),
+    );
+
+    // Verification TXT
+    promises.push(
+      this.domainsRepository.createDnsRecord({
+        domainId,
+        type: records.verification.type,
+        name: records.verification.name,
+        value: records.verification.value,
+      }),
+    );
+
+    // DKIM CNAMEs
+    for (const dkim of records.dkim) {
+      promises.push(
+        this.domainsRepository.createDnsRecord({
+          domainId,
+          type: dkim.type,
+          name: dkim.name,
+          value: dkim.value,
+        }),
+      );
     }
+
+    // MX
+    if (records.mx) {
+      promises.push(
+        this.domainsRepository.createDnsRecord({
+          domainId,
+          type: records.mx.type,
+          name: records.mx.name,
+          value: records.mx.value,
+          priority: records.mx.priority,
+        }),
+      );
+    }
+
+    await Promise.all(promises);
   }
 
   private isValidDomainName(domain: string): boolean {

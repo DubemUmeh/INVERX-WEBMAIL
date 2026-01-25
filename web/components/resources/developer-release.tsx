@@ -16,7 +16,7 @@ export default function DeveloperRelease() {
             libraries.
           </p>
           <div className="mt-4 bg-black rounded-lg p-4 font-mono text-xs text-green-400 border border-white/10">
-            <p>$ curl https://api.inverx.com/v1/user</p>
+            <p>$ curl https://api.inverx.pro/v1/user</p>
             <p className="text-white/50 mt-1">{ `"status": "connected"` }</p>
           </div>
           <a className="mt-auto pt-4 inline-flex items-center text-white font-bold hover:underline" href="#">

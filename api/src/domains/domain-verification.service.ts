@@ -166,7 +166,7 @@ export class DomainVerificationService {
       mx: {
         type: 'MX',
         name: domain,
-        value: 'mx.inverx.com',
+        value: 'mx.inverx.pro',
         priority: 10,
         required: false, // Only needed for receiving mail
       },

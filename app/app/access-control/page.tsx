@@ -2,7 +2,8 @@
 
 import ActivityShell from "@/components/layout/activity-shell";
 import { useEffect, useState } from 'react';
-import { UserPlus, MoreHorizontal, Loader2 } from 'lucide-react';
+import { UserPlus, MoreHorizontal } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { accountsApi, authApi } from '@/lib/api';
 import { AccountMember } from '@/types';
 import { toast } from 'sonner';
@@ -37,8 +38,48 @@ export default function AccessControlPage() {
   if (isLoading) {
     return (
       <ActivityShell>
-        <div className="flex items-center justify-center h-full">
-           <Loader2 className="animate-spin text-primary size-8" />
+        <header className="shrink-0 border-b border-border-dark bg-background-dark z-10 px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <Skeleton className="h-7 w-40 mb-2" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+            <Skeleton className="h-9 w-32 rounded-lg" />
+          </div>
+        </header>
+        <div className="flex-1 overflow-auto p-6">
+          <div className="rounded-xl border border-border-dark bg-surface-dark overflow-hidden">
+            <table className="min-w-full divide-y divide-border-dark">
+              <thead className="bg-[#161616]">
+                <tr>
+                  <th className="px-6 py-4 text-left"><Skeleton className="h-3 w-12" /></th>
+                  <th className="px-6 py-4 text-left"><Skeleton className="h-3 w-10" /></th>
+                  <th className="px-6 py-4 text-left"><Skeleton className="h-3 w-20" /></th>
+                  <th className="px-6 py-4 text-left"><Skeleton className="h-3 w-16" /></th>
+                  <th className="px-6 py-4"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-dark">
+                {[1, 2, 3, 4].map((i) => (
+                  <tr key={i}>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="size-8 rounded-full" />
+                        <div className="space-y-1">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4"><Skeleton className="h-5 w-16 rounded" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-5 w-16 rounded" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
+                    <td className="px-6 py-4 text-right"><Skeleton className="size-5 ml-auto" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </ActivityShell>
     );

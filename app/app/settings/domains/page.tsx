@@ -1,13 +1,25 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Monitor, Loader2, Plus, ExternalLink, Trash2, Globe } from "lucide-react";
+import { Monitor, Plus, ExternalLink, Trash2, Globe } from "lucide-react";
 import { domainsApi } from "@/lib/api/domains";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function DomainsSettingsPage() {
   const [domains, setDomains] = useState<any[]>([]);
@@ -31,9 +43,7 @@ export default function DomainsSettingsPage() {
   };
 
   const handleDeleteDomain = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this domain? This will also delete all associated email addresses.")) {
-      return;
-    }
+    // Confirmation handled by AlertDialog
     try {
       await domainsApi.delete(id);
       setDomains(domains.filter(d => d.id !== id));
@@ -45,8 +55,19 @@ export default function DomainsSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4">
+          {[1, 2, 3].map((i) => (
+             <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -93,13 +114,32 @@ export default function DomainsSettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" asChild>
-                      <Link href={`/domains/${domain.id}`}>
+                      <Link href={`/domains/${domain.name}`}>
                         <ExternalLink className="mr-2 h-4 w-4" /> Manage
                       </Link>
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteDomain(domain.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the domain
+                            and remove all associated email addresses.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteDomain(domain.id)} className="bg-red-600 hover:bg-red-700">
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </CardContent>

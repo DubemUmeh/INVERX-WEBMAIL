@@ -28,7 +28,7 @@ export default function Contact() {
                   <h3 className="font-bold text-primary dark:text-white mb-1">Chat to sales</h3>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">Speak to our friendly team.</p>
                   <a className="text-sm font-semibold underline decoration-neutral-300 underline-offset-4 hover:decoration-primary transition-all"
-                    href="#">sales@inverx.com</a>
+                    href="#">sales@inverx.pro</a>
                 </div>
               </div>
               {/* <!-- Support Item 2 --> */}

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AliasesSettingsPage() {
   const [aliases, setAliases] = useState<any[]>([]);
@@ -55,8 +56,17 @@ export default function AliasesSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+      <div className="space-y-6">
+         <div className="flex justify-between items-center mb-6">
+           <div className="space-y-2">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-4 w-64" />
+           </div>
+           <Skeleton className="h-10 w-32" />
+         </div>
+         <div className="space-y-4">
+           {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+         </div>
       </div>
     );
   }

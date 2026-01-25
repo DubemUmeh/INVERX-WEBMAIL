@@ -455,7 +455,7 @@ export default function Hero() {
                             Alice Smith
                           </span>
                           <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                            &lt;alice@Inverx.com&gt;
+                            &lt;alice@inverx.pro&gt;
                           </span>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">

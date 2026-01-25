@@ -126,7 +126,7 @@ export default function AddDomainPage() {
         )}
 
         {step === 'verification' && dnsRecords && createdDomain && (
-           <Card className="bg-surface-dark border-surface-border">
+          <Card className="bg-surface-dark border-surface-border">
             <CardContent className="pt-6 space-y-6">
                 <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg flex gap-3 text-amber-500 text-sm">
                     <AlertTriangle size={18} className="shrink-0 mt-0.5" />
@@ -135,6 +135,7 @@ export default function AddDomainPage() {
 
                 <div className="space-y-4">
                     {/* SPF Record */}
+                    {dnsRecords.spf && (
                     <div className="space-y-2">
                         <Label className="text-white text-sm font-semibold">SPF Record</Label>
                         <div className="space-y-1">
@@ -146,32 +147,55 @@ export default function AddDomainPage() {
                           </div>
                         </div>
                     </div>
+                    )}
 
-                    {/* DKIM Record */}
+                    {/* Verification TXT Record */}
+                    {dnsRecords.verification && (
                     <div className="space-y-2">
-                        <Label className="text-white text-sm font-semibold">DKIM Record</Label>
+                        <Label className="text-white text-sm font-semibold">Verification Record (Required)</Label>
                         <div className="space-y-1">
-                          <div className="text-xs text-text-secondary">Type: <span className="text-white font-mono">{dnsRecords.dkim.type}</span></div>
-                          <div className="text-xs text-text-secondary">Name: <span className="text-white font-mono">{dnsRecords.dkim.name}</span></div>
+                          <div className="text-xs text-text-secondary">Type: <span className="text-white font-mono">{dnsRecords.verification.type}</span></div>
+                          <div className="text-xs text-text-secondary">Name: <span className="text-white font-mono">{dnsRecords.verification.name}</span></div>
                           <div className="text-xs text-text-secondary mb-1">Value:</div>
                           <div className="font-mono text-xs text-white bg-background-dark p-3 rounded border border-surface-border break-all">
-                            {dnsRecords.dkim.value}
+                            {dnsRecords.verification.value}
                           </div>
                         </div>
                     </div>
+                    )}
 
-                    {/* DMARC Record */}
+                    {/* DKIM Records - AWS SES returns multiple */}
+                    {dnsRecords.dkim && Array.isArray(dnsRecords.dkim) && dnsRecords.dkim.length > 0 && (
                     <div className="space-y-2">
-                        <Label className="text-white text-sm font-semibold">DMARC Record</Label>
+                        <Label className="text-white text-sm font-semibold">DKIM Records ({dnsRecords.dkim.length})</Label>
+                        {dnsRecords.dkim.map((dkim: any, index: number) => (
+                        <div key={index} className="space-y-1 p-3 bg-background-dark rounded border border-surface-border">
+                          <div className="text-xs text-text-secondary">Type: <span className="text-white font-mono">{dkim.type}</span></div>
+                          <div className="text-xs text-text-secondary">Name: <span className="text-white font-mono break-all">{dkim.name}</span></div>
+                          <div className="text-xs text-text-secondary mb-1">Value:</div>
+                          <div className="font-mono text-xs text-white break-all">
+                            {dkim.value}
+                          </div>
+                        </div>
+                        ))}
+                    </div>
+                    )}
+
+                    {/* MX Record */}
+                    {dnsRecords.mx && (
+                    <div className="space-y-2">
+                        <Label className="text-white text-sm font-semibold">MX Record (Optional - for receiving)</Label>
                         <div className="space-y-1">
-                          <div className="text-xs text-text-secondary">Type: <span className="text-white font-mono">{dnsRecords.dmarc.type}</span></div>
-                          <div className="text-xs text-text-secondary">Name: <span className="text-white font-mono">{dnsRecords.dmarc.name}</span></div>
+                          <div className="text-xs text-text-secondary">Type: <span className="text-white font-mono">{dnsRecords.mx.type}</span></div>
+                          <div className="text-xs text-text-secondary">Name: <span className="text-white font-mono">{dnsRecords.mx.name}</span></div>
+                          <div className="text-xs text-text-secondary">Priority: <span className="text-white font-mono">{dnsRecords.mx.priority}</span></div>
                           <div className="text-xs text-text-secondary mb-1">Value:</div>
                           <div className="font-mono text-xs text-white bg-background-dark p-3 rounded border border-surface-border break-all">
-                            {dnsRecords.dmarc.value}
+                            {dnsRecords.mx.value}
                           </div>
                         </div>
                     </div>
+                    )}
                 </div>
 
             </CardContent>

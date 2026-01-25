@@ -304,9 +304,9 @@ export default function Page() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <a className="flex items-center justify-center gap-2 px-6 py-3 bg-primary dark:bg-white text-white dark:text-primary font-bold rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
-                  href="mailto:privacy@inverx.com">
+                  href="mailto:privacy@inverx.pro">
                   <span className="material-symbols-outlined text-sm">send</span>
-                  privacy@inverx.com
+                  privacy@inverx.pro
                 </a>
                 <a className="flex items-center justify-center gap-2 px-6 py-3 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-transparent text-primary dark:text-white font-bold rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                   href="#">

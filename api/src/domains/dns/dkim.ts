@@ -164,7 +164,7 @@ export function generateDkimKeyPair(domain: string): DkimKeyPair {
   const dnsRecord = `v=DKIM1; k=rsa; p=${publicKeyBase64}`;
 
   // CNAME target for managed DKIM
-  const cnameTarget = `${selector}._domainkey.dkim.inverx.com`;
+  const cnameTarget = `${selector}._domainkey.dkim.inverx.pro`;
 
   return {
     selector,
@@ -188,7 +188,7 @@ export function getDkimSetupInstructions(
   return {
     cname: {
       name: `${selector}._domainkey.${domain}`,
-      value: `${selector}._domainkey.dkim.inverx.com`,
+      value: `${selector}._domainkey.dkim.inverx.pro`,
     },
     txt: {
       name: `${selector}._domainkey.${domain}`,

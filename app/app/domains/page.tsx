@@ -21,8 +21,8 @@ import {
 import { useEffect, useState } from 'react';
 import { domainsApi } from '@/lib/api';
 import { Domain } from '@/types';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.ReactNode }) {
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -46,8 +46,25 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
 
   if (isLoading) {
     return (
-      <div className="bg-background-light dark:bg-background-dark font-display text-white min-h-screen text-base flex items-center justify-center">
-         <Loader2 className="animate-spin text-primary size-8" />
+      <div className="bg-background-light dark:bg-background-dark font-display text-white min-h-screen text-base">
+        <div className="max-w-6xl mx-auto px-6 py-10">
+           <div className="flex justify-between items-center mb-10">
+              <div className="space-y-2">
+                 <Skeleton className="h-8 w-48" />
+                 <Skeleton className="h-4 w-64" />
+              </div>
+              <Skeleton className="h-10 w-32" />
+           </div>
+           
+           <div className="flex gap-4 mb-6">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-32" />
+           </div>
+
+           <div className="grid grid-cols-1 gap-4">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
+           </div>
+        </div>
       </div>
     );
   }

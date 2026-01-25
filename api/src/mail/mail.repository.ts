@@ -176,6 +176,25 @@ export class MailRepository {
     return result[0];
   }
 
+  async updateMessage(
+    messageId: string,
+    data: Partial<{
+      messageId: string; // SES message ID
+      subject: string;
+      bodyText: string;
+      bodyHtml: string;
+      sentAt: Date;
+    }>,
+  ) {
+    const result = await this.db
+      .update(messages)
+      .set(data)
+      .where(eq(messages.id, messageId))
+      .returning();
+
+    return result[0] || null;
+  }
+
   async updateUserMessage(
     userId: string,
     messageId: string,

@@ -77,7 +77,7 @@ export default function Hero2() {
                     <div className="flex-1 flex justify-center">
                         <div className="h-6 w-64 bg-gray-200/50 rounded-md flex items-center justify-center gap-2">
                             <span className="material-symbols-outlined text-[10px] text-gray-400">lock</span>
-                            <span className="text-[10px] font-medium text-gray-400">app.inverx.com/inbox</span>
+                            <span className="text-[10px] font-medium text-gray-400">app.inverx.pro/inbox</span>
                         </div>
                     </div>
                     <div className="w-10"></div>

@@ -19,7 +19,6 @@ import {
   ShieldAlert,
   Activity,
   LogOut,
-  Loader2,
   Globe,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,13 +31,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { settingsApi, ProfileData } from "@/lib/api/settings";
 import { domainsApi } from "@/lib/api/domains";
 import { auditLogsApi } from "@/lib/api/audit-logs";
 import { signOut, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ActivityFeed } from "@/components/dashboard/activity-feed";
 
 export default function Page() {
   const { data: session } = useSession();
@@ -100,9 +112,68 @@ export default function Page() {
 
   if (isLoading && !profile) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background dark:bg-background-dark">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <section className="bg-background dark:bg-background-dark text-primary dark:text-white min-h-screen flex flex-col">
+        {/* Skeleton Navigation */}
+        <div className="w-full border-b border-[#ededed] dark:border-neutral-800 bg-muted dark:bg-background-dark sticky top-0 z-50">
+          <div className="px-4 md:px-10 py-3 flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-4">
+              <Skeleton className="size-8 rounded-lg" />
+              <Skeleton className="h-5 w-16" />
+            </div>
+            <div className="flex items-center gap-4">
+              <Skeleton className="size-10 rounded-full" />
+              <Skeleton className="size-9 rounded-full" />
+            </div>
+          </div>
+        </div>
+        {/* Skeleton Main Content */}
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-10 py-8 space-y-8">
+          {/* Skeleton Header */}
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-10 w-72" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          {/* Skeleton Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex flex-col gap-3 rounded-xl p-6 border border-[#dbdbdb] dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="size-6 rounded" />
+                </div>
+                <Skeleton className="h-9 w-16" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            ))}
+          </div>
+          {/* Skeleton Activity & Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <Skeleton className="h-6 w-36" />
+              <div className="flex flex-col gap-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-start gap-4 p-4 rounded-lg border border-[#dbdbdb] dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                    <Skeleton className="size-10 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-6">
+              <Skeleton className="h-6 w-32" />
+              <div className="flex flex-col gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      </section>
     );
   }
 
@@ -158,10 +229,26 @@ export default function Page() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-neutral-100 dark:bg-neutral-800" />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:bg-red-50 dark:focus:bg-red-900/10 dark:focus:text-red-500">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-red-600 focus:bg-red-50 dark:focus:bg-red-900/10 dark:focus:text-red-500">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You will be redirected to the login page and will need to sign in again to access your account.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700">Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">Log out</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -183,7 +270,7 @@ export default function Page() {
             </div>
           </div>
           <div className="text-sm text-neutral-400 font-medium">
-            Last updated: Just now
+            Last updated: {profile?.createdAt ? format(new Date(profile.createdAt), 'MMM d yyyy') : format(new Date(), 'MMM d yyyy')}
           </div>
         </div>
 
@@ -285,41 +372,8 @@ export default function Page() {
         {/* <!-- Split Layout: Feed & Actions --> */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
           {/* <!-- Left: Recent Activity (2/3 width on large screens) --> */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-primary dark:text-white">
-                Recent Activity
-              </h2>
-              <Link href="/activity" className="text-sm font-semibold text-neutral-500 hover:text-primary transition-colors">
-                View All
-              </Link>
-            </div>
-            <div className="flex flex-col gap-3">
-              {recentLogs.length > 0 ? (
-                recentLogs.map((log) => (
-                  <div key={log.id} className="flex items-start gap-4 p-4 rounded-lg border border-[#dbdbdb] dark:border-neutral-800 bg-white dark:bg-neutral-900">
-                    <div className="bg-primary/10 p-2 rounded-full text-primary shrink-0">
-                      <Activity size={20} />
-                    </div>
-                    <div className="flex flex-col flex-1 gap-1">
-                      <h3 className="text-primary dark:text-white font-bold capitalize">
-                        {log.action.replace(/_/g, ' ')}
-                      </h3>
-                      <p className="text-neutral-500 text-sm">
-                        {log.resourceType}: {log.resourceId}
-                      </p>
-                    </div>
-                    <span className="text-xs font-medium text-neutral-400 whitespace-nowrap">
-                      {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-12 border border-dashed rounded-lg">
-                  <p className="text-neutral-500">No recent activity found.</p>
-                </div>
-              )}
-            </div>
+          <div className="lg:col-span-2">
+            <ActivityFeed logs={recentLogs} />
           </div>
 
           {/* <!-- Right: Quick Actions (1/3 width on large screens) --> */}

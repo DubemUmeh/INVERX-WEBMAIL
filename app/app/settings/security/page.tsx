@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { settingsApi, SecurityStatus } from "@/lib/api/settings";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SecuritySettingsPage() {
   const [security, setSecurity] = useState<SecurityStatus | null>(null);
@@ -78,8 +79,20 @@ export default function SecuritySettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+      <div className="space-y-6">
+        <div className="space-y-2 mb-8">
+           <Skeleton className="h-8 w-64" />
+           <Skeleton className="h-4 w-96" />
+        </div>
+        
+        {/* Password Skeleton */}
+        <Skeleton className="h-[250px] w-full rounded-xl" />
+
+        {/* 2FA Skeleton */}
+        <Skeleton className="h-[120px] w-full rounded-xl mt-6" />
+
+        {/* Recent Activity Skeleton */}
+         <Skeleton className="h-[300px] w-full rounded-xl mt-6" />
       </div>
     );
   }

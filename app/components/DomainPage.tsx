@@ -18,12 +18,24 @@ import {
   Trash2,
   AlertTriangle,
   Lock,
-  ArrowRight,
-  Loader2
+  ArrowRight
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { CreateAddressDialog } from "@/components/domains/create-address-dialog";
 import { domainsApi } from '@/lib/api';
 import { Domain, DnsRecord, DomainAddress } from '@/types';
 import { toast } from 'sonner';
@@ -41,6 +53,44 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([]);
   const [addresses, setAddresses] = useState<DomainAddress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleVerify = async () => {
+    try {
+      setIsVerifying(true);
+      toast.info('Verifying domain configuration...');
+      await domainsApi.verify(domainId);
+      toast.success('Domain verification initiated');
+      // Limit reloads
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      toast.error('Failed to verify domain');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleDnsCheck = async () => {
+     try {
+       setIsVerifying(true);
+       toast.info('Checking DNS records...');
+       const result = await domainsApi.checkDns(domainId);
+       if(result.verified) {
+         toast.success('DNS records are valid');
+       } else {
+         toast.warning('Some DNS records are missing or incorrect');
+       }
+       // Refresh records
+       if (activeTab === 'dns-records' || activeTab === 'dns') {
+          const records = await domainsApi.getDnsRecords(domainId);
+          setDnsRecords(records.storedRecords);
+       }
+     } catch (error) {
+       toast.error('Failed to check DNS records');
+     } finally {
+       setIsVerifying(false);
+     }
+  };
 
   // Load domain details
   useEffect(() => {
@@ -106,8 +156,64 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background-dark text-white">
-        <Loader2 className="animate-spin size-8 text-primary" />
+      <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden min-h-screen">
+        <div className="relative flex h-screen w-full overflow-hidden">
+          {showSidebar && (
+            <div className="hidden lg:block h-full shrink-0 w-[240px] border-r border-surface-border bg-surface-dark">
+              <div className="p-4 space-y-4">
+                <Skeleton className="h-8 w-32" />
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex-1 flex flex-col h-full overflow-hidden bg-background-dark">
+            {/* Skeleton Header */}
+            <header className="flex items-center justify-between border-b border-surface-border px-4 md:px-16 py-4 bg-background-dark shrink-0">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-5 w-40" />
+              </div>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-24 rounded-lg" />
+                <Skeleton className="h-8 w-28 rounded-lg" />
+              </div>
+            </header>
+            {/* Skeleton Content */}
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10">
+              <div className="max-w-5xl mx-auto w-full flex flex-col gap-8">
+                {/* Skeleton Domain Card */}
+                <div className="rounded-xl border border-surface-border bg-surface-dark p-6">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="size-16 rounded-xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-7 w-48" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </div>
+                </div>
+                {/* Skeleton Tabs */}
+                <div className="flex items-center gap-4 border-b border-surface-border pb-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-4 w-20" />
+                  ))}
+                </div>
+                {/* Skeleton Content */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-surface-dark border border-surface-border p-5 rounded-xl">
+                      <Skeleton className="h-4 w-24 mb-3" />
+                      <Skeleton className="h-8 w-16 mb-2" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
       </div>
     );
   }
@@ -176,7 +282,12 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                 <ExternalLink size={16} />
                 <span className="hidden sm:inline">Visit Site</span>
               </button>
-              <button className="bg-primary hover:bg-blue-600 text-accent px-4 py-1.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20">
+              <button 
+                onClick={handleVerify}
+                disabled={isVerifying}
+                className="bg-primary hover:bg-blue-600 text-accent px-4 py-1.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isVerifying ? <RefreshCw className="animate-spin size-4" /> : null}
                 Verify Config
               </button>
             </div>
@@ -297,14 +408,26 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                       <div>
                         <h3 className="text-lg font-bold text-white mb-4">Quick Actions</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                           <Button variant="outline" className="h-auto py-4 justify-start gap-4 border-surface-border bg-surface-dark hover:bg-surface-hover hover:text-white">
-                              <Plus className="size-5 text-primary" />
-                              <div className="text-left">
-                                <div className="font-semibold">Add Address</div>
-                                <div className="text-xs text-muted-foreground font-normal">Create new address</div>
-                              </div>
-                           </Button>
-                           <Button variant="outline" className="h-auto py-4 justify-start gap-4 border-surface-border bg-surface-dark hover:bg-surface-hover hover:text-white">
+                           <CreateAddressDialog 
+                              domainId={domainId} 
+                              domainName={domainName} 
+                              onSuccess={() => {/* Typically would refresh addresses but we are in overview tab */}}
+                              trigger={
+                                <Button variant="outline" className="h-auto py-4 justify-start gap-4 border-surface-border bg-surface-dark hover:bg-surface-hover hover:text-white">
+                                    <Plus className="size-5 text-primary" />
+                                    <div className="text-left">
+                                      <div className="font-semibold">Add Address</div>
+                                      <div className="text-xs text-muted-foreground font-normal">Create new address</div>
+                                    </div>
+                                </Button>
+                              }
+                           />
+                           <Button 
+                              variant="outline" 
+                              className="h-auto py-4 justify-start gap-4 border-surface-border bg-surface-dark hover:bg-surface-hover hover:text-white"
+                              onClick={handleDnsCheck}
+                              disabled={isVerifying}
+                           >
                               <Search className="size-5 text-purple-500" />
                               <div className="text-left">
                                 <div className="font-semibold">DNS Check</div>
@@ -410,10 +533,14 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                             <h3 className="text-lg font-bold text-white">Domain Addresses</h3>
                             <p className="text-text-secondary text-sm">Manage your custom domain email addresses and aliases.</p>
                           </div>
-                          <Button className="bg-primary hover:bg-blue-600 text-white">
-                            <Plus size={16} className="mr-2" />
-                            Create Address
-                          </Button>
+                          <CreateAddressDialog 
+                            domainId={domainId} 
+                            domainName={domainName} 
+                            onSuccess={() => {
+                              // Refresh addresses
+                              domainsApi.getAddresses(domainId).then(setAddresses);
+                            }}
+                          />
                        </div>
                        
                        {addresses.length === 0 ? (
@@ -423,9 +550,18 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                               </div>
                               <h3 className="text-white font-bold text-lg">No addresses configured</h3>
                               <p className="text-text-secondary max-w-sm mx-auto mt-2 mb-6">Start receiving emails by creating your first custom domain address.</p>
-                              <Button variant="outline" className="border-surface-border text-white hover:bg-surface-hover">
-                                 Create Address
-                              </Button>
+                              <CreateAddressDialog 
+                                domainId={domainId} 
+                                domainName={domainName} 
+                                onSuccess={() => {
+                                  domainsApi.getAddresses(domainId).then(setAddresses);
+                                }}
+                                trigger={
+                                  <Button variant="outline" className="border-surface-border text-white hover:bg-surface-hover">
+                                     Create Address
+                                  </Button>
+                                }
+                              />
                            </div>
                        ) : (
                           <div className="rounded-xl border border-border-dark bg-surface-dark overflow-hidden">
@@ -452,9 +588,37 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                                              {new Date(addr.createdAt).toLocaleDateString()}
                                           </td>
                                           <td className="px-6 py-4 text-right">
-                                             <Button variant="ghost" size="icon" className="text-text-secondary hover:text-red-400 hover:bg-red-500/10">
-                                                <Trash2 size={16} />
-                                             </Button>
+                                             <AlertDialog>
+                                               <AlertDialogTrigger asChild>
+                                                 <Button variant="ghost" size="icon" className="text-text-secondary hover:text-red-400 hover:bg-red-500/10">
+                                                   <Trash2 size={16} />
+                                                 </Button>
+                                               </AlertDialogTrigger>
+                                               <AlertDialogContent className="bg-surface-dark border-surface-border">
+                                                 <AlertDialogHeader>
+                                                   <AlertDialogTitle className="text-white">Delete Address</AlertDialogTitle>
+                                                   <AlertDialogDescription>
+                                                     Are you sure you want to delete <span className="font-medium text-white">{addr.email}</span>? This action cannot be undone and you will no longer receive emails at this address.
+                                                   </AlertDialogDescription>
+                                                 </AlertDialogHeader>
+                                                 <AlertDialogFooter>
+                                                   <AlertDialogCancel className="bg-surface-light border-surface-border text-white hover:bg-surface-hover">Cancel</AlertDialogCancel>
+                                                   <AlertDialogAction 
+                                                     className="bg-red-600 hover:bg-red-700 text-white"
+                                                     onClick={() => {
+                                                       domainsApi.deleteAddress(domainId, addr.id)
+                                                         .then(() => {
+                                                           setAddresses(prev => prev.filter(a => a.id !== addr.id));
+                                                           toast.success('Address deleted successfully');
+                                                         })
+                                                         .catch(() => toast.error('Failed to delete address'));
+                                                     }}
+                                                   >
+                                                     Delete
+                                                   </AlertDialogAction>
+                                                 </AlertDialogFooter>
+                                               </AlertDialogContent>
+                                             </AlertDialog>
                                           </td>
                                        </tr>
                                     ))}
@@ -533,10 +697,44 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                                 <div className="font-medium text-white">Remove Domain</div>
                                 <p className="text-sm text-text-secondary">Remove this domain from your account. DNS records will stop working.</p>
                              </div>
-                             <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white">
-                                <Trash2 size={16} className="mr-2" />
-                                Remove Domain
-                             </Button>
+                             <AlertDialog>
+                               <AlertDialogTrigger asChild>
+                                 <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white">
+                                   <Trash2 size={16} className="mr-2" />
+                                   Remove Domain
+                                 </Button>
+                               </AlertDialogTrigger>
+                               <AlertDialogContent className="bg-surface-dark border-surface-border">
+                                 <AlertDialogHeader>
+                                   <AlertDialogTitle className="text-white">Remove Domain</AlertDialogTitle>
+                                   <AlertDialogDescription>
+                                     Are you sure you want to remove <span className="font-medium text-white">{domainName}</span>? This will:
+                                     <ul className="list-disc list-inside mt-2 space-y-1">
+                                       <li>Stop all email delivery for this domain</li>
+                                       <li>Delete all associated email addresses</li>
+                                       <li>Remove all DNS configuration</li>
+                                     </ul>
+                                     <p className="mt-2 text-red-400 font-medium">This action cannot be undone.</p>
+                                   </AlertDialogDescription>
+                                 </AlertDialogHeader>
+                                 <AlertDialogFooter>
+                                   <AlertDialogCancel className="bg-surface-light border-surface-border text-white hover:bg-surface-hover">Cancel</AlertDialogCancel>
+                                   <AlertDialogAction 
+                                     className="bg-red-600 hover:bg-red-700 text-white"
+                                     onClick={() => {
+                                       domainsApi.delete(domainId)
+                                         .then(() => {
+                                           toast.success('Domain removed successfully');
+                                           window.location.href = '/domains';
+                                         })
+                                         .catch(() => toast.error('Failed to remove domain'));
+                                     }}
+                                   >
+                                     Remove Domain
+                                   </AlertDialogAction>
+                                 </AlertDialogFooter>
+                               </AlertDialogContent>
+                             </AlertDialog>
                           </div>
                        </div>
                     </div>

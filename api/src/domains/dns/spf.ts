@@ -16,11 +16,11 @@ export interface SpfVerificationResult {
 
 /**
  * Expected SPF record format for InverX:
- * v=spf1 include:_spf.inverx.com ~all
+ * v=spf1 include:_spf.inverx.pro ~all
  * or
- * v=spf1 include:_spf.inverx.com -all
+ * v=spf1 include:_spf.inverx.pro -all
  */
-const INVERX_SPF_INCLUDE = 'include:_spf.inverx.com';
+const INVERX_SPF_INCLUDE = 'include:_spf.inverx.pro';
 
 export async function verifySpf(
   domain: string,
