@@ -41,6 +41,12 @@ export class DomainsController {
     return this.domainsService.createDomain(accountId, dto);
   }
 
+  // All addresses for account (must be before :id to avoid route conflict)
+  @Get('addresses')
+  getAllAddresses(@CurrentUser('accountId') accountId: string) {
+    return this.domainsService.getAllAddresses(accountId);
+  }
+
   @Get(':id')
   getDomain(
     @CurrentUser('accountId') accountId: string,

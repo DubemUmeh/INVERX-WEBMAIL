@@ -119,6 +119,12 @@ export class DomainsService {
     const domain = await this.getDomain(accountId, idOrName);
 
     const syncResult = await this.sesSyncService.syncDomainStatus(domain.id);
+    const nameservers = await this.domainVerificationService.getNameservers(
+      domain.name,
+    );
+    const isCloudflare = nameservers.some((ns) =>
+      ns.toLowerCase().includes('cloudflare.com'),
+    );
 
     // Get current records to display status
     return {
@@ -126,6 +132,8 @@ export class DomainsService {
       domain: domain.name,
       verified: syncResult?.verified || false,
       status: syncResult?.status,
+      nameservers,
+      isCloudflare,
       message: syncResult?.verified
         ? 'Domain verified successfully! You can now create email addresses.'
         : 'Domain verification pending. Please check your DNS records.',
@@ -144,12 +152,93 @@ export class DomainsService {
   }
 
   async checkDns(accountId: string, idOrName: string) {
-    return this.verifyDomain(accountId, idOrName);
+    const domain = await this.getDomain(accountId, idOrName);
+
+    // Get stored records to find DKIM selectors
+    const storedRecords = await this.domainsRepository.findDnsRecords(
+      domain.id,
+    );
+
+    // Extract DKIM selectors from stored CNAME records
+    // Format: selector._domainkey.domain
+    const dkimSelectors = storedRecords
+      .filter((r) => r.type === 'CNAME' && r.name.includes('_domainkey'))
+      .map((r) => {
+        const parts = r.name.split('._domainkey');
+        return parts[0];
+      });
+
+    // 1. Check real DNS records
+    const dnsStatus = await this.domainVerificationService.verifyDomain(
+      domain.name,
+      dkimSelectors.length > 0 ? dkimSelectors : undefined,
+    );
+
+    // 2. Sync with AWS SES
+    const syncResult = await this.sesSyncService.syncDomainStatus(domain.id);
+
+    // 3. Update local DB if verification passed
+    if (dnsStatus.overallValid) {
+      // DNS is valid - mark domain as verified
+      await this.domainsRepository.update(domain.id, {
+        spfVerified: dnsStatus.spf.valid,
+        dkimVerified: dnsStatus.dkim.valid,
+        dmarcVerified: dnsStatus.dmarc.valid,
+        verificationStatus: 'verified',
+        status: 'active',
+        lastCheckedAt: new Date(),
+      });
+
+      // Also update all DNS records to active
+      await this.domainsRepository.updateDnsRecordsStatus(domain.id, 'active');
+    }
+
+    const nameservers = await this.domainVerificationService.getNameservers(
+      domain.name,
+    );
+    const isCloudflare = nameservers.some((ns) =>
+      ns.toLowerCase().includes('cloudflare.com'),
+    );
+
+    // Log for debugging
+    console.log(
+      `[DNS Check] ${domain.name}: SPF=${dnsStatus.spf.valid}, DKIM=${dnsStatus.dkim.valid}, Overall=${dnsStatus.overallValid}`,
+    );
+
+    if (!dnsStatus.overallValid) {
+      console.log(
+        `[DNS Check] Failed reasons: SPF=${dnsStatus.spf.reason}, DKIM=${dnsStatus.dkim.reason}`,
+      );
+    }
+
+    return {
+      domainId: domain.id,
+      domain: domain.name,
+      verified: syncResult?.verified || false,
+      status: syncResult?.status,
+      identifiers: {
+        // Detailed verification results
+        spf: dnsStatus.spf,
+        dkim: dnsStatus.dkim,
+        dmarc: dnsStatus.dmarc,
+      },
+      nameservers,
+      isCloudflare,
+      message: dnsStatus.overallValid
+        ? syncResult?.verified
+          ? 'Domain verified successfully!'
+          : 'DNS records found! Waiting for AWS to confirm verification.'
+        : 'Some DNS records are missing or incorrect.',
+    };
   }
 
   async getAddresses(accountId: string, idOrName: string) {
     const domain = await this.getDomain(accountId, idOrName);
     return this.domainsRepository.findAddresses(domain.id);
+  }
+
+  async getAllAddresses(accountId: string) {
+    return this.domainsRepository.findAllAddressesByAccount(accountId);
   }
 
   async createAddress(

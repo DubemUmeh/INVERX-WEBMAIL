@@ -113,12 +113,35 @@ export class DomainsRepository {
     return result[0];
   }
 
+  async updateDnsRecordsStatus(domainId: string, status: 'active' | 'pending') {
+    await this.db
+      .update(dnsRecords)
+      .set({ status })
+      .where(eq(dnsRecords.domainId, domainId));
+  }
+
   // Domain Addresses
   async findAddresses(domainId: string) {
     return this.db
       .select()
       .from(domainAddresses)
       .where(eq(domainAddresses.domainId, domainId));
+  }
+
+  async findAllAddressesByAccount(accountId: string) {
+    return this.db
+      .select({
+        id: domainAddresses.id,
+        email: domainAddresses.email,
+        localPart: domainAddresses.localPart,
+        displayName: domainAddresses.displayName,
+        domainId: domainAddresses.domainId,
+        domainName: domains.name,
+        createdAt: domainAddresses.createdAt,
+      })
+      .from(domainAddresses)
+      .innerJoin(domains, eq(domainAddresses.domainId, domains.id))
+      .where(eq(domains.accountId, accountId));
   }
 
   async createAddress(data: {

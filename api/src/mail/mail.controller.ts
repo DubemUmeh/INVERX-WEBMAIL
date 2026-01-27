@@ -22,13 +22,23 @@ export class MailController {
   constructor(private mailService: MailService) {}
 
   @Get('inbox')
-  getInbox(@CurrentUser('sub') userId: string, @Query() query: MailQueryDto) {
-    return this.mailService.getInbox(userId, query);
+  getInbox(
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('accountId') accountId: string,
+    @CurrentUser('email') email: string,
+    @Query() query: MailQueryDto,
+  ) {
+    return this.mailService.getInbox(userId, accountId, email, query);
   }
 
   @Get('sent')
-  getSent(@CurrentUser('sub') userId: string, @Query() query: MailQueryDto) {
-    return this.mailService.getSent(userId, query);
+  getSent(
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('accountId') accountId: string,
+    @CurrentUser('email') email: string,
+    @Query() query: MailQueryDto,
+  ) {
+    return this.mailService.getSent(userId, accountId, email, query);
   }
 
   @Get('drafts')
@@ -58,10 +68,9 @@ export class MailController {
   sendMail(
     @CurrentUser('sub') userId: string,
     @CurrentUser('accountId') accountId: string,
-    @CurrentUser('email') email: string,
     @Body() dto: SendMailDto,
   ) {
-    return this.mailService.sendMail(userId, accountId, email, dto);
+    return this.mailService.sendMail(userId, accountId, dto.from, dto);
   }
 
   @Post('draft')

@@ -68,7 +68,7 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href='/sign-up' className="hidden md:flex h-9 md:h-10 items-center px-5 rounded-xl border border-gray-200 text-sm font-semibold text-primary bg-blue-100/30 hover:bg-gray-50 transition-colors cursor-pointer shadow-xs">
+            <Link href='/waitlists' className="hidden md:flex h-9 md:h-10 items-center px-5 rounded-xl border border-gray-200 text-sm font-semibold text-primary bg-blue-100/30 hover:bg-gray-50 transition-colors cursor-pointer shadow-xs">
               Get Started
             </Link>
 
@@ -104,7 +104,7 @@ export default function Navbar() {
                   </Link>
                 ))}
                 <div className="pt-2">
-                  <Link href='/sign-up' className="w-full flex h-11 items-center justify-center px-5 rounded-xl border border-gray-200 text-base font-semibold text-primary bg-white hover:bg-gray-50 transition-colors cursor-pointer shadow-sm">
+                  <Link href='/waitlists' className="w-full flex h-11 items-center justify-center px-5 rounded-xl border border-gray-200 text-base font-semibold text-primary bg-white hover:bg-gray-50 transition-colors cursor-pointer shadow-sm">
                     Get Started
                   </Link>
                 </div>

@@ -30,107 +30,76 @@ const DEFAULT_SELECTOR = 'inverx';
 /**
  * Verify DKIM record for a domain
  */
+/**
+ * Verify DKIM record for a domain
+ */
 export async function verifyDkim(
   domain: string,
-  selector: string = DEFAULT_SELECTOR,
+  selectors: string | string[] = DEFAULT_SELECTOR,
 ): Promise<DkimVerificationResult> {
-  const recordName = `${selector}._domainkey.${domain}`;
+  const selectorList = Array.isArray(selectors) ? selectors : [selectors];
+  const results: string[] = [];
+  let allValid = true;
 
-  // First, try CNAME lookup (preferred for managed DKIM)
-  try {
-    const cnameRecords = await dns.resolveCname(recordName);
+  for (const selector of selectorList) {
+    const recordName = `${selector}._domainkey.${domain}`;
+    let recordFound = false;
 
-    if (cnameRecords.length > 0) {
-      const cnameTarget = cnameRecords[0];
-
-      // Check if it points to InverX
-      if (cnameTarget.toLowerCase().includes('inverx')) {
-        return {
-          valid: true,
-          selector,
-          record: cnameTarget,
-          reason: 'DKIM CNAME record correctly points to InverX.',
-          recordType: 'CNAME',
-        };
+    // First, try CNAME lookup (preferred for managed DKIM)
+    try {
+      const cnameRecords = await dns.resolveCname(recordName);
+      if (cnameRecords.length > 0) {
+        results.push(`[${selector}] CNAME found: ${cnameRecords[0]}`);
+        recordFound = true;
       }
-
-      return {
-        valid: false,
-        selector,
-        record: cnameTarget,
-        reason: `DKIM CNAME found but points to ${cnameTarget}, not InverX.`,
-        recordType: 'CNAME',
-      };
+    } catch {
+      // CNAME not found, try TXT
     }
-  } catch {
-    // CNAME not found, try TXT
+
+    if (!recordFound) {
+      // Try TXT record lookup
+      try {
+        const txtRecords = await dns.resolveTxt(recordName);
+        const txtRecord = txtRecords.map((chunks) => chunks.join('')).join('');
+
+        if (txtRecord) {
+          // Check for valid DKIM format
+          if (!txtRecord.includes('v=DKIM1') && !txtRecord.includes('p=')) {
+            results.push(`[${selector}] Invalid TXT format`);
+            allValid = false;
+          } else {
+            results.push(`[${selector}] TXT found`);
+            recordFound = true;
+          }
+        }
+      } catch (error: any) {
+        // Not found
+      }
+    }
+
+    if (!recordFound) {
+      results.push(`[${selector}] Missing record`);
+      allValid = false;
+    }
   }
 
-  // Try TXT record lookup
-  try {
-    const txtRecords = await dns.resolveTxt(recordName);
-    const txtRecord = txtRecords.map((chunks) => chunks.join('')).join('');
-
-    if (!txtRecord) {
-      return {
-        valid: false,
-        selector,
-        record: null,
-        reason: `No DKIM record found at ${recordName}. Add a CNAME or TXT record.`,
-        recordType: null,
-      };
-    }
-
-    // Check for valid DKIM format
-    if (!txtRecord.includes('v=DKIM1') && !txtRecord.includes('p=')) {
-      return {
-        valid: false,
-        selector,
-        record: txtRecord,
-        reason:
-          'DKIM record found but format is invalid. Must contain v=DKIM1 and p= (public key).',
-        recordType: 'TXT',
-      };
-    }
-
-    // Check if it's our public key (simplified check)
-    // In production, you'd compare against stored public key
-    if (txtRecord.includes('p=')) {
-      return {
-        valid: true,
-        selector,
-        record: txtRecord,
-        reason: 'DKIM TXT record is correctly configured.',
-        recordType: 'TXT',
-      };
-    }
-
+  if (allValid) {
     return {
-      valid: false,
-      selector,
-      record: txtRecord,
-      reason: 'DKIM record format is invalid.',
-      recordType: 'TXT',
-    };
-  } catch (error: any) {
-    if (error.code === 'ENODATA' || error.code === 'ENOTFOUND') {
-      return {
-        valid: false,
-        selector,
-        record: null,
-        reason: `No DKIM record found at ${recordName}. Add the required DNS record.`,
-        recordType: null,
-      };
-    }
-
-    return {
-      valid: false,
-      selector,
-      record: null,
-      reason: `DNS lookup failed: ${error.message}`,
-      recordType: null,
+      valid: true,
+      selector: selectorList.join(','),
+      record: 'Multiple records checked',
+      reason: 'All DKIM records are correctly configured.',
+      recordType: 'CNAME',
     };
   }
+
+  return {
+    valid: false,
+    selector: selectorList.join(','),
+    record: null,
+    reason: `Missing or invalid DKIM records: ${results.filter((r) => r.includes('Missing') || r.includes('Invalid')).join(', ')}`,
+    recordType: null,
+  };
 }
 
 /**

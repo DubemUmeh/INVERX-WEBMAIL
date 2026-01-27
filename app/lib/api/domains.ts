@@ -16,4 +16,7 @@ export const domainsApi = {
     api.post<any>(`/domains/${id}/addresses`, data),
   deleteAddress: (id: string, addressId: string) =>
     api.delete<void>(`/domains/${id}/addresses/${addressId}`),
+
+  // Get all addresses across all domains
+  getAllAddresses: () => api.get<any>("/domains/addresses"),
 };

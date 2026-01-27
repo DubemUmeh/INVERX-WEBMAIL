@@ -31,6 +31,7 @@ import { toast } from "sonner";
 export default function GeneralSettingsPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [domains, setDomains] = useState<any[]>([]);
+  const [domainAddresses, setDomainAddresses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -47,21 +48,27 @@ export default function GeneralSettingsPage() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [profileData, domainsData] = await Promise.all([
+      const [profileData, domainsData, addressesData] = await Promise.all([
         settingsApi.getProfile(),
-        domainsApi.getAll()
+        domainsApi.getAll(),
+        domainsApi.getAllAddresses()
       ]);
       
       setProfile(profileData);
       setDomains(domainsData || []);
+      setDomainAddresses(addressesData || []);
       
       // Set defaults
       if (domainsData && domainsData.length > 0) {
         setDefaultDomain(domainsData[0].name);
       }
-      setDefaultAddress(profileData.email);
-      if (profileData.themePreference) {
-        // We could use themePreference here if we add it to the form
+      
+      // Set default address: prefer domain address if available, fallback to profile email
+      if (addressesData && addressesData.length > 0) {
+        setDefaultAddress(addressesData[0].email);
+        console.log('user addresses', addressesData[0].email);
+      } else {
+        setDefaultAddress(profileData.email);
       }
     } catch (error) {
       console.error("Failed to fetch settings data:", error);
@@ -147,17 +154,39 @@ export default function GeneralSettingsPage() {
               <label className="text-sm font-medium leading-none">
                 Default Sending Address
               </label>
-              <Select value={defaultAddress} onValueChange={setDefaultAddress}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select email" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profile?.email && (
-                    <SelectItem value={profile.email}>{profile.email}</SelectItem>
-                  )}
-                  {/* Here we could also list aliases if we had an api for them */}
-                </SelectContent>
-              </Select>
+              {domainAddresses.length > 0 ? (
+                <Select value={defaultAddress} onValueChange={setDefaultAddress}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select email" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profile?.email && (
+                      <SelectItem value={profile.email}>
+                        <span className="flex items-center gap-2">
+                          {profile.email} <span className="text-xs text-muted-foreground">(Account)</span>
+                        </span>
+                      </SelectItem>
+                    )}
+                    {domainAddresses.map((addr) => (
+                      <SelectItem key={addr.id} value={addr.email}>
+                        <span className="flex items-center gap-2">
+                          {addr.email} <span className="text-xs text-muted-foreground">({addr.domainName})</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : domains.length > 0 ? (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-sm">
+                  <Mail size={16} />
+                  <span>No addresses yet. <a href={`/domains/${domains[0].name}#addresses`} className="underline font-medium">Create one</a> from your domain.</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm">
+                  <Mail size={16} />
+                  <span>No domains yet. <a href="/domains/add" className="underline font-medium">Add a domain</a> to create sending addresses.</span>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium leading-none">
@@ -260,14 +289,16 @@ export default function GeneralSettingsPage() {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete Account</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you absolutely sure? This action cannot be undone. This will permanently delete your account and remove all of your data from our servers, including:
-                    <ul className="list-disc list-inside mt-2 space-y-1">
-                      <li>All domains and DNS configurations</li>
-                      <li>All email addresses and aliases</li>
-                      <li>All messages and attachments</li>
-                      <li>All API keys and integrations</li>
-                    </ul>
+                  <AlertDialogDescription asChild>
+                    <div className="text-sm text-neutral-500">
+                      <p>Are you absolutely sure? This action cannot be undone. This will permanently delete your account and remove all of your data from our servers, including:</p>
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        <li>All domains and DNS configurations</li>
+                        <li>All email addresses and aliases</li>
+                        <li>All messages and attachments</li>
+                        <li>All API keys and integrations</li>
+                      </ul>
+                    </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

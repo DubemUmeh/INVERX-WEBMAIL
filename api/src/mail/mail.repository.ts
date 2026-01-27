@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, desc, or, ilike } from 'drizzle-orm';
+import { eq, and, desc, or, ilike, ne, inArray, not, sql } from 'drizzle-orm';
 import { DRIZZLE } from '../database/database.module.js';
 import type { Database } from '../database/drizzle.js';
 import {
@@ -14,10 +14,16 @@ export class MailRepository {
 
   async findInbox(
     userId: string,
+    userEmails: string[],
     options: { page?: number; limit?: number; search?: string } = {},
   ) {
     const { page = 1, limit = 20, search } = options;
     const offset = (page - 1) * limit;
+
+    // Create a SQL array literal for the user emails safely
+    // Drizzle will parameterize this if passed correctly, but for array literal in SQL operator we might need care.
+    // 'ARRAY['a','b']'
+    const emailsSql = sql`ARRAY[${sql.join(userEmails, sql`, `)}]::text[]`;
 
     let query = this.db
       .select({
@@ -32,6 +38,12 @@ export class MailRepository {
           eq(userMessages.isDeleted, false),
           eq(userMessages.isArchived, false),
           eq(userMessages.isDraft, false),
+          // Inbox = Messages where user is in To, CC, or BCC
+          or(
+            sql`${messages.toRecipients} && ${emailsSql}`,
+            sql`${messages.ccRecipients} && ${emailsSql}`,
+            sql`${messages.bccRecipients} && ${emailsSql}`,
+          ),
         ),
       )
       .orderBy(desc(messages.sentAt))
@@ -43,6 +55,7 @@ export class MailRepository {
 
   async findSent(
     userId: string,
+    userEmails: string[],
     options: { page?: number; limit?: number } = {},
   ) {
     const { page = 1, limit = 20 } = options;
@@ -55,9 +68,12 @@ export class MailRepository {
       })
       .from(userMessages)
       .innerJoin(messages, eq(messages.id, userMessages.messageId))
-      .innerJoin(messages, eq(messages.fromEmail, userId)) // Simplified - should join with user's emails
       .where(
-        and(eq(userMessages.userId, userId), eq(userMessages.isDeleted, false)),
+        and(
+          eq(userMessages.userId, userId),
+          eq(userMessages.isDeleted, false),
+          inArray(messages.fromEmail, userEmails),
+        ),
       )
       .orderBy(desc(messages.sentAt))
       .limit(limit)

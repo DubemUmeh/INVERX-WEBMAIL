@@ -11,7 +11,7 @@ export default function SecurityCTA() {
         <h2 className="text-3xl md:text-5xl font-black tracking-tight max-w-[720px]">Ready to take back your privacy?</h2>
         <p className="text-lg text-white/70 max-w-[600px]">Join thousands of teams who trust Inverx for secure, distraction-free communication.</p>
         <div className="flex flex-col sm:flex-row gap-4 mt-4">
-          <Link href='/login' className="h-12 px-8 rounded bg-white text-primary text-base font-bold flex items-center justify-center hover:bg-neutral-200 transition-colors">
+          <Link href='/waitlists' className="h-12 px-8 rounded bg-white text-primary text-base font-bold flex items-center justify-center hover:bg-neutral-200 transition-colors">
             Get Started
           </Link>
           <Link href='/report' className="h-12 px-8 rounded border border-white/20 bg-transparent text-white text-base font-bold flex items-center justify-center hover:bg-white/10 transition-colors">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { 
   Mail, 
   PenSquare, 
@@ -42,6 +43,7 @@ export default function WebmailLayout({ children }: { children: React.ReactNode 
   const { data: session } = useSession();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     fetchProfile();
@@ -77,6 +79,13 @@ export default function WebmailLayout({ children }: { children: React.ReactNode 
   const userDisplayName = profile?.fullName || session?.user?.name || "User";
   const userEmail = profile?.email || session?.user?.email || "";
 
+  // Helper to determine if a link is active
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const getLinkClass = (href: string) => 
+    isActive(href)
+      ? "flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/15 text-white font-medium border border-white/5"
+      : "flex items-center justify-between px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors";
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
         <div className="flex flex-col gap-6">
@@ -99,39 +108,39 @@ export default function WebmailLayout({ children }: { children: React.ReactNode 
           </Link>
           {/* Navigation Menu */}
           <nav className="flex flex-col gap-1 mt-2">
-            <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/15 text-white font-medium border border-white/5" href="/mail/inbox">
+            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/inbox")} href="/mail/inbox">
               <div className="flex items-center gap-3">
                 <Inbox className="w-5 h-5" />
                 <span className="text-sm">Inbox</span>
               </div>
               <span className="text-xs bg-white text-webmail-primary px-1.5 py-0.5 rounded font-bold min-w-[20px] text-center">12</span>
             </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors" href="/mail/starred">
+            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/starred")} href="/mail/starred">
               <div className="flex items-center gap-3">
                 <Star className="w-5 h-5" />
                 <span className="text-sm font-medium">Starred</span>
               </div>
             </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors" href="/mail/sent">
+            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/sent")} href="/mail/sent">
               <div className="flex items-center gap-3">
                 <Send className="w-5 h-5" />
                 <span className="text-sm font-medium">Sent</span>
               </div>
             </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors" href="/mail/drafts">
+            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/drafts")} href="/mail/drafts">
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5" />
                 <span className="text-sm font-medium">Drafts</span>
               </div>
               <span className="text-xs text-white/40 font-medium">2</span>
             </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors" href="/mail/archive">
+            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/archive")} href="/mail/archive">
               <div className="flex items-center gap-3">
                 <Archive className="w-5 h-5" />
                 <span className="text-sm font-medium">Archive</span>
               </div>
             </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors" href="/mail/trash">
+            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/trash")} href="/mail/trash">
               <div className="flex items-center gap-3">
                 <Trash2 className="w-5 h-5" />
                 <span className="text-sm font-medium">Trash</span>

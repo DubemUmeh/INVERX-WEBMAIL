@@ -39,14 +39,18 @@ export default function InboxPage() {
   useEffect(() => {
     async function loadMessages() {
       try {
-        const { data } = await mailApi.getMessages();
-        setMessages(data);
-        if (data.length > 0) {
+        const response = await mailApi.getMessages();
+        // Handle response structure depending on API client (sometimes data is nested, sometimes direct)
+        const data = Array.isArray(response) ? response : (response?.data || []);
+        
+        setMessages(Array.isArray(data) ? data : []);
+        if (Array.isArray(data) && data.length > 0) {
           setSelectedMessage(data[0]);
         }
       } catch (error) {
         console.error(error);
         toast.error('Failed to load messages');
+        setMessages([]); // Ensure messages is array on error
       } finally {
         setIsLoading(false);
       }

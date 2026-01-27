@@ -21,13 +21,45 @@ export class MailService {
     private domainsService: DomainsService,
   ) {}
 
-  async getInbox(userId: string, query: MailQueryDto) {
-    const results = await this.mailRepository.findInbox(userId, query);
+  async getInbox(
+    userId: string,
+    accountId: string,
+    userEmail: string,
+    query: MailQueryDto,
+  ) {
+    const domainAddresses =
+      await this.domainsService.getAllAddresses(accountId);
+    const userEmails = [
+      userEmail,
+      ...(domainAddresses || []).map((addr) => addr.email),
+    ];
+
+    const results = await this.mailRepository.findInbox(
+      userId,
+      userEmails,
+      query,
+    );
     return results.map((r) => this.formatMessage(r));
   }
 
-  async getSent(userId: string, query: MailQueryDto) {
-    const results = await this.mailRepository.findSent(userId, query);
+  async getSent(
+    userId: string,
+    accountId: string,
+    userEmail: string,
+    query: MailQueryDto,
+  ) {
+    const domainAddresses =
+      await this.domainsService.getAllAddresses(accountId);
+    const userEmails = [
+      userEmail,
+      ...(domainAddresses || []).map((addr) => addr.email),
+    ];
+
+    const results = await this.mailRepository.findSent(
+      userId,
+      userEmails,
+      query,
+    );
     return results.map((r) => this.formatMessage(r));
   }
 
@@ -221,6 +253,7 @@ export class MailService {
       isArchived: result.userMessage.isArchived,
       isDraft: result.userMessage.isDraft,
       hasAttachments: result.message.hasAttachments,
+      sesMessageId: result.message.messageId,
     };
   }
 }

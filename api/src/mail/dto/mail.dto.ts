@@ -1,6 +1,9 @@
 import { IsString, IsOptional, IsArray, IsBoolean } from 'class-validator';
 
 export class SendMailDto {
+  @IsString()
+  from: string;
+
   @IsArray()
   @IsString({ each: true })
   to: string[];

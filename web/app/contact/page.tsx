@@ -1,4 +1,4 @@
-import { MessageCircle, BookOpenCheck, Users, ChevronDown } from "lucide-react"
+import { MessageCircle, BookOpenCheck, Users, ChevronDown, Send } from "lucide-react"
 
 export default function Contact() {
   return (
@@ -119,10 +119,10 @@ export default function Contact() {
                 {/* <!-- Submit Button --> */}
                 <div className="pt-2">
                   <button
-                    className="w-full md:w-auto min-w-[160px] h-12 bg-primary dark:bg-white text-white dark:text-primary font-bold rounded-lg shadow-md hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                    type="button">
+                    type='submit'
+                    className="w-full md:w-auto min-w-[160px] h-12 bg-primary dark:bg-white text-white dark:text-primary font-bold rounded-lg shadow-md hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer">
                     <span>Send Message</span>
-                    <span className="material-symbols-outlined text-sm font-bold">send</span>
+                    <span className="material-symbols-outlined text-sm font-bold"><Send /></span>
                   </button>
                   <p className="text-xs text-neutral-500 mt-4 text-center md:text-left">
                     We respect your privacy. No spam, ever.

@@ -207,7 +207,7 @@ export default function Page() {
               </button>
             </form>
           </div>
-          <p className="text-center pt-5 text-neutral-600">Already have an account? <Link href='/login' className="text-black font-semibold underline underline-offset-2">Log In</Link></p>
+          <p className="text-center pt-5 text-neutral-600">Already have an account? <Link href='/waitlists' className="text-black font-semibold underline underline-offset-2">Log In</Link></p>
           <div className="text-center mt-8 lg:hidden">
             <p className="text-sm text-neutral-500">
               Trusted by teams at

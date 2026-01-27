@@ -21,6 +21,7 @@ export interface SpfVerificationResult {
  * v=spf1 include:_spf.inverx.pro -all
  */
 const INVERX_SPF_INCLUDE = 'include:_spf.inverx.pro';
+const SES_SPF_INCLUDE = 'include:amazonses.com';
 
 export async function verifySpf(
   domain: string,
@@ -45,16 +46,17 @@ export async function verifySpf(
       };
     }
 
-    // Check if InverX is included
-    const includesInverx = spfRecord
-      .toLowerCase()
-      .includes(INVERX_SPF_INCLUDE.toLowerCase());
+    // Check if InverX or SES is included
+    const lowerRecord = spfRecord.toLowerCase();
+    const includesInverx =
+      lowerRecord.includes(INVERX_SPF_INCLUDE.toLowerCase()) ||
+      lowerRecord.includes(SES_SPF_INCLUDE.toLowerCase());
 
     if (!includesInverx) {
       return {
         valid: false,
         record: spfRecord,
-        reason: `SPF record found but does not include InverX. Add "${INVERX_SPF_INCLUDE}" to your SPF record.`,
+        reason: `SPF record found but does not include InverX or SES. Add "${INVERX_SPF_INCLUDE}" or "${SES_SPF_INCLUDE}" to your SPF record.`,
         includesInverx: false,
       };
     }

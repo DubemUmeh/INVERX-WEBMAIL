@@ -95,32 +95,32 @@ export default function AddDomainPage() {
         {step === 'input' && (
           <Card className="bg-surface-dark border-surface-border">
             <form onSubmit={handleSubmit}>
-                <CardContent className="pt-6 space-y-4">
+              <CardContent className="pt-6 space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="domain" className="text-white">Domain Name</Label>
-                    <Input 
-                        id="domain" 
-                        placeholder="example.com" 
-                        value={domainInput}
-                        onChange={(e) => setDomainInput(e.target.value)}
-                        className="bg-background-dark border-surface-border text-white placeholder:text-neutral-500"
-                        autoFocus
-                        disabled={isCreating}
-                    />
+                  <Label htmlFor="domain" className="text-white">Domain Name</Label>
+                  <Input 
+                    id="domain" 
+                    placeholder="example.com" 
+                    value={domainInput}
+                    onChange={(e) => setDomainInput(e.target.value)}
+                    className="bg-background-dark border-surface-border text-white placeholder:text-neutral-500"
+                    autoFocus
+                    disabled={isCreating}
+                  />
                 </div>
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" className="w-full" disabled={!domainInput || isCreating}>
-                        {isCreating ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin mr-2" />
-                            Creating...
-                          </>
-                        ) : (
-                          'Continue'
-                        )}
-                    </Button>
-                </CardFooter>
+              </CardContent>
+              <CardFooter className='pt-5'>
+                <Button type="submit" className="w-full cursor-pointer" disabled={!domainInput || isCreating}>
+                  {isCreating ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin mr-2" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Continue'
+                  )}
+                </Button>
+              </CardFooter>
             </form>
           </Card>
         )}
@@ -202,12 +202,12 @@ export default function AddDomainPage() {
             <CardFooter className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  className="flex-1 border-surface-border text-white hover:bg-surface-hover" 
+                  className="flex-1 border-surface-border text-white hover:bg-surface-hover cursor-pointer" 
                   onClick={handleSkipToView}
                 >
                   View Domain
                 </Button>
-                <Button className="flex-1" onClick={handleVerify} disabled={isVerifying}>
+                <Button className="flex-1 cursor-pointer" onClick={handleVerify} disabled={isVerifying}>
                     {isVerifying ? (
                         <>
                             <Loader2 size={16} className="animate-spin mr-2" />

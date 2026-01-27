@@ -193,6 +193,7 @@ export default function ComposePage() {
     
     try {
       const result = await mailApi.sendMessage({
+        from: fromEmail,
         to: toRecipients,
         cc: ccRecipients.length > 0 ? ccRecipients : undefined,
         bcc: bccRecipients.length > 0 ? bccRecipients : undefined,

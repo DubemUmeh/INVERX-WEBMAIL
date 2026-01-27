@@ -22,6 +22,7 @@ import {
   DkimVerificationResult,
   DkimKeyPair,
 } from './dns/dkim.js';
+import { promises as dns } from 'dns';
 import {
   verifyDmarc,
   generateDmarcRecord,
@@ -80,7 +81,7 @@ export class DomainVerificationService {
    */
   async verifyDomain(
     domain: string,
-    dkimSelector?: string,
+    dkimSelector?: string | string[],
   ): Promise<VerificationStatus> {
     // Perform all DNS checks in parallel
     const [spfResult, dkimResult, dmarcResult] = await Promise.all([
@@ -107,7 +108,7 @@ export class DomainVerificationService {
   async verifyAndUpdateDomain(
     domainId: string,
     domainName: string,
-    dkimSelector?: string,
+    dkimSelector?: string | string[],
   ): Promise<VerificationStatus> {
     const status = await this.verifyDomain(domainName, dkimSelector);
 
@@ -188,7 +189,7 @@ export class DomainVerificationService {
   async reVerifyDomain(
     domainId: string,
     domainName: string,
-    dkimSelector?: string,
+    dkimSelector?: string | string[],
   ): Promise<{
     wasVerified: boolean;
     isVerified: boolean;
@@ -213,5 +214,18 @@ export class DomainVerificationService {
       changed: wasVerified !== status.overallValid,
       status,
     };
+  }
+
+  /**
+   * Get nameservers for a domain to detect provider (e.g. Cloudflare)
+   */
+  async getNameservers(domain: string): Promise<string[]> {
+    try {
+      const ns = await dns.resolveNs(domain);
+      return ns;
+    } catch (error) {
+      // If NS check fails, return empty array rather than throwing
+      return [];
+    }
   }
 }

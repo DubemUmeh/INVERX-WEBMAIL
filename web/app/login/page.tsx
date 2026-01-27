@@ -157,7 +157,7 @@ export default function Page() {
           </div>
         </form>
 
-        <p className="text-center pt-5 text-neutral-600">Haven't registered an account? <Link href='/sign-up' className="text-black font-semibold underline underline-offset-2">Create One</Link></p>
+        <p className="text-center pt-5 text-neutral-600">Haven't registered an account? <Link href='/waitlists' className="text-black font-semibold underline underline-offset-2">Create One</Link></p>
       </div>
     </main>
   )

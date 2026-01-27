@@ -20,7 +20,7 @@ export default function TeamsHero() {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <Link
-                    href='/login'
+                    href='/waitlists'
                     className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-primary dark:bg-white text-white dark:text-primary text-base font-bold leading-normal tracking-[0.015em] hover:opacity-90 transition-opacity">
                     <span className="truncate">Request Access</span>
                   </Link>

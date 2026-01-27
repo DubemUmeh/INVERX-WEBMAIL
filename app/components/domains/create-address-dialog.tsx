@@ -55,13 +55,13 @@ export function CreateAddressDialog({ domainId, domainName, onSuccess, trigger }
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button className="bg-primary hover:bg-blue-600 text-white">
+          <Button className="bg-primary hover:bg-blue-600 transition-colors duration-200 ease-in-out text-background cursor-pointer">
             <Plus size={16} className="mr-2" />
             Create Address
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-surface-dark border-surface-border text-white">
+      <DialogContent className="sm:max-w-[425px] bg-background border-surface-border text-white">
         <DialogHeader>
           <DialogTitle>Create Address</DialogTitle>
           <DialogDescription className="text-text-secondary">
@@ -93,13 +93,13 @@ export function CreateAddressDialog({ domainId, domainName, onSuccess, trigger }
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              className="border-surface-border text-white hover:bg-surface-hover"
+              className="border-surface-border text-white hover:bg-surface-hover transition-colors duration-300 ease-in-out cursor-pointer"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
-              className="bg-primary hover:bg-blue-600 text-white"
+              className="bg-background border hover:bg-blue-500/50 transition-colors duration-300 ease-in-out text-white cursor-pointer"
               disabled={isLoading || !localPart}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

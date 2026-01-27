@@ -406,6 +406,16 @@ export const webhookEvents = pgTable('webhook_events', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
+// Waitlist Table
+export const waitlist = pgTable('waitlist', {
+  id: uuid('id')
+    .primaryKey()
+    .$defaultFn(() => generateUuidv7()),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: text('email').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
 // Audit Logs
 export const auditLogs = pgTable('audit_logs', {
   id: uuid('id')
