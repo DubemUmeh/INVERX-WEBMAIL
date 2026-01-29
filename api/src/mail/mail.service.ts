@@ -2,10 +2,13 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { MailRepository } from './mail.repository.js';
 import { SesEmailService } from './ses-email.service.js';
 import { DomainsService } from '../domains/domains.service.js';
+import { SmtpService } from '../smtp/smtp.service.js';
+import { SmtpEmailService } from '../smtp/smtp-email.service.js';
 import {
   SendMailDto,
   CreateDraftDto,
@@ -15,10 +18,14 @@ import {
 
 @Injectable()
 export class MailService {
+  private readonly logger = new Logger(MailService.name);
+
   constructor(
     private mailRepository: MailRepository,
     private sesEmailService: SesEmailService,
     private domainsService: DomainsService,
+    private smtpService: SmtpService,
+    private smtpEmailService: SmtpEmailService,
   ) {}
 
   async getInbox(
@@ -106,30 +113,13 @@ export class MailService {
     fromEmail: string,
     dto: SendMailDto,
   ) {
-    // 1. Validate sender email domain is verified
-    const senderDomain = this.sesEmailService.extractDomain(fromEmail);
+    // 1. Check if this fromEmail has an SMTP configuration
+    const smtpConfig = await this.smtpService.getDecryptedConfigByFromEmail(
+      fromEmail,
+      userId,
+    );
 
-    try {
-      const domain = await this.domainsService.getDomain(
-        accountId,
-        senderDomain,
-      );
-
-      if (domain.verificationStatus !== 'verified') {
-        throw new BadRequestException(
-          `Cannot send from ${fromEmail}. The domain ${senderDomain} is not verified. Please verify your domain first.`,
-        );
-      }
-    } catch (error: any) {
-      if (error instanceof NotFoundException) {
-        throw new BadRequestException(
-          `Cannot send from ${fromEmail}. The domain ${senderDomain} is not registered in your account. Please add and verify the domain first.`,
-        );
-      }
-      throw error;
-    }
-
-    // 2. Create the message record in database
+    // 2. Create the message record in database first
     const message = await this.mailRepository.createMessage({
       accountId,
       subject: dto.subject,
@@ -142,20 +132,73 @@ export class MailService {
       replyTo: dto.replyTo,
     });
 
-    // 3. Send the email via AWS SES
     try {
-      const result = await this.sesEmailService.sendEmail({
-        from: fromEmail,
-        to: dto.to,
-        cc: dto.cc,
-        bcc: dto.bcc,
-        subject: dto.subject,
-        bodyText: dto.bodyText,
-        bodyHtml: dto.bodyHtml,
-        replyTo: dto.replyTo,
-      });
+      let result: { messageId: string; success: boolean };
 
-      // Update message with SES message ID
+      if (smtpConfig) {
+        // 3a. Send via SMTP
+        this.logger.log(`Sending email via SMTP for ${fromEmail}`);
+        result = await this.smtpEmailService.sendEmail(
+          {
+            host: smtpConfig.host,
+            port: smtpConfig.port,
+            username: smtpConfig.username,
+            password: smtpConfig.password,
+            encryption: smtpConfig.encryption as any,
+            requireTls: smtpConfig.requireTls,
+            timeoutSeconds: smtpConfig.timeoutSeconds,
+          },
+          {
+            from: fromEmail,
+            fromName: smtpConfig.fromName,
+            to: dto.to,
+            cc: dto.cc,
+            bcc: dto.bcc,
+            subject: dto.subject,
+            bodyText: dto.bodyText,
+            bodyHtml: dto.bodyHtml,
+            replyTo: dto.replyTo,
+          },
+        );
+      } else {
+        // 3b. Validate sender email domain is verified for SES
+        const senderDomain = this.sesEmailService.extractDomain(fromEmail);
+
+        try {
+          const domain = await this.domainsService.getDomain(
+            accountId,
+            senderDomain,
+          );
+
+          if (domain.verificationStatus !== 'verified') {
+            throw new BadRequestException(
+              `Cannot send from ${fromEmail}. The domain ${senderDomain} is not verified. Please verify your domain first.`,
+            );
+          }
+        } catch (error: any) {
+          if (error instanceof NotFoundException) {
+            throw new BadRequestException(
+              `Cannot send from ${fromEmail}. The domain ${senderDomain} is not registered in your account. Please add and verify the domain first, or configure SMTP for this address.`,
+            );
+          }
+          throw error;
+        }
+
+        // Send via AWS SES
+        this.logger.log(`Sending email via AWS SES for ${fromEmail}`);
+        result = await this.sesEmailService.sendEmail({
+          from: fromEmail,
+          to: dto.to,
+          cc: dto.cc,
+          bcc: dto.bcc,
+          subject: dto.subject,
+          bodyText: dto.bodyText,
+          bodyHtml: dto.bodyHtml,
+          replyTo: dto.replyTo,
+        });
+      }
+
+      // Update message with message ID
       await this.mailRepository.updateMessage(message.id, {
         messageId: result.messageId,
       });
@@ -169,12 +212,12 @@ export class MailService {
 
       return {
         id: message.id,
-        sesMessageId: result.messageId,
+        messageId: result.messageId,
+        method: smtpConfig ? 'smtp' : 'ses',
         message: 'Email sent successfully',
       };
     } catch (error: any) {
-      // If SES fails, we should still have the message in the database
-      // Mark it as a draft so the user can try again
+      // If sending fails, mark as draft so user can retry
       await this.mailRepository.createUserMessage({
         userId,
         messageId: message.id,

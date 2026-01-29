@@ -20,6 +20,7 @@ import {
   Activity,
   LogOut,
   Globe,
+  ActivityIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -406,6 +407,16 @@ export default function Page() {
                 <div className="flex items-center gap-3">
                   <Settings className="text-neutral-500" size={24} />
                   <span className="font-bold">Configuration</span>
+                </div>
+                <ChevronRight
+                  className="text-neutral-400 group-hover:translate-x-1 transition-transform"
+                  size={24}
+                />
+              </Link>
+              <Link href="/activity" className="group flex items-center justify-between w-full p-4 rounded-lg border border-[#dbdbdb] dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-primary dark:text-white transition-all">
+                <div className="flex items-center gap-3">
+                  <BarChart className="text-neutral-500" size={24} />
+                  <span className="font-bold">Activity</span>
                 </div>
                 <ChevronRight
                   className="text-neutral-400 group-hover:translate-x-1 transition-transform"

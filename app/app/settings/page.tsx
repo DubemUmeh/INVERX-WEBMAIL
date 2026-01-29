@@ -26,12 +26,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { domainsApi } from "@/lib/api/domains";
 import { settingsApi, ProfileData } from "@/lib/api/settings";
+import { smtpApi, SmtpConfig } from "@/lib/api/smtp";
 import { toast } from "sonner";
 
 export default function GeneralSettingsPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [domains, setDomains] = useState<any[]>([]);
   const [domainAddresses, setDomainAddresses] = useState<any[]>([]);
+  const [smtpConfigs, setSmtpConfigs] = useState<SmtpConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -48,23 +50,28 @@ export default function GeneralSettingsPage() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [profileData, domainsData, addressesData] = await Promise.all([
+      const [profileData, domainsData, addressesData, smtpData] = await Promise.all([
         settingsApi.getProfile(),
         domainsApi.getAll(),
-        domainsApi.getAllAddresses()
+        domainsApi.getAllAddresses(),
+        smtpApi.getAll().catch(() => []), // SMTP is optional
       ]);
       
       setProfile(profileData);
       setDomains(domainsData || []);
       setDomainAddresses(addressesData || []);
+      setSmtpConfigs(smtpData || []);
       
       // Set defaults
       if (domainsData && domainsData.length > 0) {
         setDefaultDomain(domainsData[0].name);
       }
       
-      // Set default address: prefer domain address if available, fallback to profile email
-      if (addressesData && addressesData.length > 0) {
+      // Set default address: prefer SMTP default, then domain address, fallback to profile email
+      const defaultSmtp = smtpData?.find((s: SmtpConfig) => s.isDefault);
+      if (defaultSmtp) {
+        setDefaultAddress(defaultSmtp.fromEmail);
+      } else if (addressesData && addressesData.length > 0) {
         setDefaultAddress(addressesData[0].email);
         console.log('user addresses', addressesData[0].email);
       } else {
@@ -154,39 +161,50 @@ export default function GeneralSettingsPage() {
               <label className="text-sm font-medium leading-none">
                 Default Sending Address
               </label>
-              {domainAddresses.length > 0 ? (
-                <Select value={defaultAddress} onValueChange={setDefaultAddress}>
+                            <Select value={defaultAddress} onValueChange={setDefaultAddress}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select email" />
                   </SelectTrigger>
                   <SelectContent>
-                    {profile?.email && (
-                      <SelectItem value={profile.email}>
-                        <span className="flex items-center gap-2">
-                          {profile.email} <span className="text-xs text-muted-foreground">(Account)</span>
-                        </span>
-                      </SelectItem>
+                    {/* SMTP Addresses */}
+                    {smtpConfigs.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">SMTP</div>
+                        {smtpConfigs.map((config) => (
+                          <SelectItem key={`smtp-${config.id}`} value={config.fromEmail}>
+                            <span className="flex items-center gap-2">
+                              {config.fromEmail} <span className="text-xs text-muted-foreground">({config.name})</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </>
                     )}
-                    {domainAddresses.map((addr) => (
-                      <SelectItem key={addr.id} value={addr.email}>
-                        <span className="flex items-center gap-2">
-                          {addr.email} <span className="text-xs text-muted-foreground">({addr.domainName})</span>
-                        </span>
-                      </SelectItem>
-                    ))}
+                    {/* Domain Addresses */}
+                    {domainAddresses.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Domain</div>
+                        {domainAddresses.map((addr) => (
+                          <SelectItem key={addr.id} value={addr.email}>
+                            <span className="flex items-center gap-2">
+                              {addr.email} <span className="text-xs text-muted-foreground">({addr.domainName})</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {/* Account Email */}
+                    {profile?.email && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Account</div>
+                        <SelectItem value={profile.email}>
+                          <span className="flex items-center gap-2">
+                            {profile.email}
+                          </span>
+                        </SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
-              ) : domains.length > 0 ? (
-                <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-sm">
-                  <Mail size={16} />
-                  <span>No addresses yet. <a href={`/domains/${domains[0].name}#addresses`} className="underline font-medium">Create one</a> from your domain.</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm">
-                  <Mail size={16} />
-                  <span>No domains yet. <a href="/domains/add" className="underline font-medium">Add a domain</a> to create sending addresses.</span>
-                </div>
-              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium leading-none">
@@ -209,7 +227,7 @@ export default function GeneralSettingsPage() {
           </div>
           <div className="flex items-center justify-between space-x-2">
             <div className="space-y-0.5">
-               <label className="text-sm font-medium leading-none">
+              <label className="text-sm font-medium leading-none">
                 Always use default address
               </label>
               <p className="text-xs text-neutral-500">

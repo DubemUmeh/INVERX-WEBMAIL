@@ -18,7 +18,8 @@ import {
   Lightbulb,
   Dock,
   Check,
-  Loader2
+  Loader2,
+  Server
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,11 +31,14 @@ import {
 } from "@/components/ui/select";
 import { mailApi } from "@/lib/api/mail";
 import { domainsApi } from "@/lib/api/domains";
+import { smtpApi } from "@/lib/api/smtp";
 
 interface EmailAddress {
   email: string;
-  domainId: string;
+  domainId?: string; // Optional for SMTP
+  smtpId?: string;   // New field for SMTP
   displayName?: string;
+  type: 'domain' | 'smtp';
 }
 
 export default function ComposePage() {
@@ -66,27 +70,49 @@ export default function ComposePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Fetch available email addresses from verified domains
+  // Fetch available email addresses (Domains + SMTP)
   useEffect(() => {
     async function fetchAddresses() {
       try {
         setLoadingAddresses(true);
-        const domains = await domainsApi.getAll();
+        const [domains, smtpConfigs] = await Promise.all([
+          domainsApi.getAll(),
+          smtpApi.getAll().catch(() => []) // SMTP is optional, don't fail if fetching fails
+        ]);
         
-        // Collect all addresses from verified domains
+        // Collect all addresses
         const addresses: EmailAddress[] = [];
+
+        // 1. Add SMTP addresses
+        if (Array.isArray(smtpConfigs)) {
+          for (const config of smtpConfigs) {
+            addresses.push({
+              email: config.fromEmail,
+              smtpId: config.id,
+              displayName: config.fromName || config.name,
+              type: 'smtp'
+            });
+          }
+        }
         
+        // 2. Add Domain addresses
         if (Array.isArray(domains)) {
           for (const domain of domains) {
             if (domain.verificationStatus === "verified") {
               const domainAddresses = await domainsApi.getAddresses(domain.id);
               if (Array.isArray(domainAddresses)) {
                 for (const addr of domainAddresses) {
-                  addresses.push({
-                    email: addr.email,
-                    domainId: domain.id,
-                    displayName: addr.displayName,
-                  });
+                  // Avoid duplicates if SMTP matches domain address (SMTP takes precedence for sending preference usually, 
+                  // but here we just want unique options. If they are the same email, we might want to show both or merge.
+                  // For simplicity, let's dedup by email)
+                  if (!addresses.some(a => a.email === addr.email)) {
+                    addresses.push({
+                      email: addr.email,
+                      domainId: domain.id,
+                      displayName: addr.displayName,
+                      type: 'domain'
+                    });
+                  }
                 }
               }
             }
@@ -95,8 +121,8 @@ export default function ComposePage() {
         
         setAvailableAddresses(addresses);
         
-        // Set default from email if available
-        if (addresses.length > 0) {
+        // Set default from email if available and not set
+        if (!fromEmail && addresses.length > 0) {
           setFromEmail(addresses[0].email);
         }
       } catch (err) {
@@ -311,17 +337,35 @@ export default function ComposePage() {
                           <SelectContent>
                             {availableAddresses.map((addr) => (
                               <SelectItem key={addr.email} value={addr.email}>
-                                {addr.displayName
-                                  ? `${addr.displayName} <${addr.email}>`
-                                  : addr.email}
+                                <div className="flex items-center justify-between w-full min-w-[200px]">
+                                  <span>
+                                    {addr.displayName
+                                      ? `${addr.displayName} <${addr.email}>`
+                                      : addr.email}
+                                  </span>
+                                  {addr.type === 'smtp' && (
+                                    <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-1.5 py-0.5 rounded ml-2 uppercase tracking-wider">
+                                      SMTP
+                                    </span>
+                                  )}
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full text-xs font-medium border border-green-100 dark:border-green-900">
-                          <Check className="w-3.5 h-3.5 fill-current" />
-                          <span>Verified</span>
-                        </div>
+                        
+                        {/* Status Indicator */}
+                        {availableAddresses.find(a => a.email === fromEmail)?.type === 'smtp' ? (
+                          <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full text-xs font-medium border border-indigo-100 dark:border-indigo-900">
+                            <Server className="w-3.5 h-3.5" />
+                            <span>SMTP</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full text-xs font-medium border border-green-100 dark:border-green-900">
+                            <Check className="w-3.5 h-3.5 fill-current" />
+                            <span>Verified</span>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -584,117 +628,6 @@ export default function ComposePage() {
             </div>
           </div>
         </div>
-
-        {/* Right Column: Advanced Options */}
-        <aside className="w-full lg:w-[320px] xl:w-[360px] shrink-0 flex flex-col gap-6">
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between h-[44px]">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-              Advanced Options
-            </h3>
-            <button className="text-neutral-400 hover:text-webmail-primary dark:hover:text-white transition-colors">
-              <Dock className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Panel Content */}
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 overflow-hidden flex flex-col gap-px bg-neutral-100 dark:bg-neutral-800">
-            {/* Section: Delivery & Behavior */}
-            <div className="bg-white dark:bg-surface-dark p-5">
-              <div className="flex items-center gap-2 mb-4 text-webmail-primary dark:text-white">
-                <Clock className="text-neutral-400 w-5 h-5" />
-                <h4 className="font-semibold text-sm">Delivery & Behavior</h4>
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    Schedule Send
-                  </label>
-                  <div className="relative">
-                    <input
-                      className="w-full bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm px-3 py-2 text-webmail-primary dark:text-white focus:ring-1 focus:ring-black focus:border-black dark:focus:ring-white dark:focus:border-white"
-                      type="datetime-local"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    Priority Level
-                  </label>
-                  <div className="flex bg-neutral-50 dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-neutral-700">
-                    <button className="flex-1 text-xs font-medium py-1.5 rounded text-neutral-500 hover:text-webmail-primary transition-colors">
-                      Low
-                    </button>
-                    <button className="flex-1 text-xs font-medium py-1.5 rounded bg-white dark:bg-neutral-700 shadow-sm text-webmail-primary dark:text-white">
-                      Normal
-                    </button>
-                    <button className="flex-1 text-xs font-medium py-1.5 rounded text-neutral-500 hover:text-red-500 transition-colors">
-                      High
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Section: Security */}
-            <div className="bg-white dark:bg-surface-dark p-5">
-              <div className="flex items-center gap-2 mb-4 text-webmail-primary dark:text-white">
-                <Lock className="text-neutral-400 w-5 h-5" />
-                <h4 className="font-semibold text-sm">Security</h4>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-webmail-primary dark:text-white">
-                      Force TLS
-                    </span>
-                    <span className="text-xs text-neutral-500">
-                      Require secure connection
-                    </span>
-                  </div>
-                  <div className="w-9 h-5 bg-black dark:bg-white rounded-full relative cursor-pointer">
-                    <div className="absolute right-0.5 top-0.5 w-4 h-4 bg-white dark:bg-black rounded-full shadow-sm"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Section: Tracking */}
-            <div className="bg-white dark:bg-surface-dark p-5">
-              <div className="flex items-center gap-2 mb-4 text-webmail-primary dark:text-white">
-                <BarChart className="text-neutral-400 w-5 h-5" />
-                <h4 className="font-semibold text-sm">Tracking</h4>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-webmail-primary dark:text-white" />
-                  <span className="text-sm">Track Opens</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-webmail-primary dark:text-white" />
-                  <span className="text-sm">Track Link Clicks</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Helper Card */}
-          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 flex gap-3">
-            <Lightbulb className="text-blue-600 dark:text-blue-400 w-5 h-5 mt-0.5" />
-            <div>
-              <h5 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-1">
-                Pro Tip
-              </h5>
-              <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
-                Use{" "}
-                <span className="font-mono bg-blue-100 dark:bg-blue-900/40 px-1 py-0.5 rounded">
-                  Cmd + Enter
-                </span>{" "}
-                to send your message instantly.
-              </p>
-            </div>
-          </div>
-        </aside>
       </main>
     </div>
   );

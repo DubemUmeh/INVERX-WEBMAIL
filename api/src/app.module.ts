@@ -27,6 +27,7 @@ import { WebhooksModule } from './webhooks/webhooks.module.js';
 import { AuditLogsModule } from './audit-logs/audit-logs.module.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
 import { WaitlistModule } from './waitlist/waitlist.module.js';
+import { SmtpModule } from './smtp/smtp.module.js';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { WaitlistModule } from './waitlist/waitlist.module.js';
     AuditLogsModule,
     AttachmentsModule,
     WaitlistModule,
+    SmtpModule,
   ],
   providers: [
     // Global validation pipe

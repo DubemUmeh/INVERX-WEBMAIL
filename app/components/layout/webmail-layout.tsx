@@ -4,15 +4,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  Mail, 
-  PenSquare, 
-  Inbox, 
-  Star, 
-  Send, 
-  FileText, 
-  Archive, 
-  Trash2, 
-  Plus, 
   Settings,
   Search,
   HelpCircle,
@@ -37,6 +28,7 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { settingsApi, ProfileData } from "@/lib/api/settings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import SidebarContent from "../webmail-sidebar";
 
 export default function WebmailLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -86,104 +78,11 @@ export default function WebmailLayout({ children }: { children: React.ReactNode 
       ? "flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/15 text-white font-medium border border-white/5"
       : "flex items-center justify-between px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors";
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-        <div className="flex flex-col gap-6">
-          {/* Branding */}
-          <Link href="/dashboard" className="flex items-center gap-3 px-2 pt-2">
-            <div className="bg-white/10 p-2 rounded-lg flex items-center justify-center">
-              <Mail className="text-white w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold tracking-tight leading-none text-white">Inverx</h1>
-              <p className="text-[10px] text-white/50 font-medium">Pro Workspace</p>
-            </div>
-          </Link>
-          {/* Primary Action */}
-          <Link href="/mail/compose"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex items-center justify-center gap-3 w-full bg-white text-webmail-primary hover:bg-gray-100 transition-all font-bold h-12 rounded-lg shadow-sm group">
-            <PenSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            <span>Compose</span>
-          </Link>
-          {/* Navigation Menu */}
-          <nav className="flex flex-col gap-1 mt-2">
-            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/inbox")} href="/mail/inbox">
-              <div className="flex items-center gap-3">
-                <Inbox className="w-5 h-5" />
-                <span className="text-sm">Inbox</span>
-              </div>
-              <span className="text-xs bg-white text-webmail-primary px-1.5 py-0.5 rounded font-bold min-w-[20px] text-center">12</span>
-            </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/starred")} href="/mail/starred">
-              <div className="flex items-center gap-3">
-                <Star className="w-5 h-5" />
-                <span className="text-sm font-medium">Starred</span>
-              </div>
-            </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/sent")} href="/mail/sent">
-              <div className="flex items-center gap-3">
-                <Send className="w-5 h-5" />
-                <span className="text-sm font-medium">Sent</span>
-              </div>
-            </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/drafts")} href="/mail/drafts">
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5" />
-                <span className="text-sm font-medium">Drafts</span>
-              </div>
-              <span className="text-xs text-white/40 font-medium">2</span>
-            </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/archive")} href="/mail/archive">
-              <div className="flex items-center gap-3">
-                <Archive className="w-5 h-5" />
-                <span className="text-sm font-medium">Archive</span>
-              </div>
-            </Link>
-            <Link onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/mail/trash")} href="/mail/trash">
-              <div className="flex items-center gap-3">
-                <Trash2 className="w-5 h-5" />
-                <span className="text-sm font-medium">Trash</span>
-              </div>
-            </Link>
-          </nav>
-          {/* Custom Labels */}
-          <div className="mt-2">
-            <div className="flex items-center justify-between px-3 mb-2 group cursor-pointer">
-              <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest">Labels</h3>
-              <Plus className="text-white/20 w-4 h-4 group-hover:text-white/60 transition-colors" />
-            </div>
-            <nav className="flex flex-col gap-0.5">
-              <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition-colors group" href="#">
-                <span className="w-2 h-2 rounded-full border-2 border-blue-400"></span>
-                <span className="text-sm font-medium">Personal</span>
-              </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition-colors group" href="#">
-                <span className="w-2 h-2 rounded-full border-2 border-purple-400"></span>
-                <span className="text-sm font-medium">Work</span>
-              </Link>
-              <Link onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition-colors group" href="#">
-                <span className="w-2 h-2 rounded-full border-2 border-green-400"></span>
-                <span className="text-sm font-medium">Finance</span>
-              </Link>
-            </nav>
-          </div>
-        </div>
-        {/* Sidebar Footer */}
-        <div className="mt-auto pt-4 border-t border-white/10">
-          <Link onClick={() => setIsMobileMenuOpen(false)} href="/settings" className="flex items-center gap-3 px-3 py-2 w-full text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-            <Settings className="w-5 h-5" />
-            <span className="text-sm font-medium">Settings</span>
-          </Link>
-        </div>
-    </div>
-  );
-
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background font-sans text-webmail-primary dark:text-white">
+    <div className="flex h-screen w-full overflow-x-hidden bg-background font-sans text-background dark:text-white no-scrollbar">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 bg-webmail-primary text-white shrink-0 flex-col justify-between p-4 h-full border-r border-transparent">
-        <SidebarContent />
+      <aside className="hidden lg:flex w-[280px] text-white shrink-0 flex-col justify-between py-4 px-2 h-full border-r border-transparent no-scrollbar">
+        <SidebarContent setIsMobileMenuOpen={setIsMobileMenuOpen} getLinkClass={getLinkClass} />
       </aside>
 
       {/* Main Application Area */}
@@ -192,20 +91,20 @@ export default function WebmailLayout({ children }: { children: React.ReactNode 
         <header className="flex items-center justify-between px-4 md:px-6 h-16 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-[#121212] z-20 shrink-0">
           
           <div className="flex items-center gap-4 flex-1">
-             {/* Mobile Menu Trigger */}
-             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="lg:hidden shrink-0 -ml-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">
-                    <Menu className="w-5 h-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[280px] p-0 border-r-0 bg-webmail-primary">
-                   <SheetTitle className="hidden">Navigation</SheetTitle>
-                   <div className="h-full p-4 overflow-y-auto">
-                     <SidebarContent />
-                   </div>
-                </SheetContent>
-             </Sheet>
+            {/* Mobile Menu Trigger */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden shrink-0 -ml-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[280px] p-0 border-r-0 bg-background no-scrollbar">
+                <SheetTitle className="hidden">Navigation</SheetTitle>
+                <div className="h-full p-4 overflow-y-auto">
+                  <SidebarContent setIsMobileMenuOpen={setIsMobileMenuOpen} getLinkClass={getLinkClass} />
+                </div>
+              </SheetContent>
+            </Sheet>
 
             {/* Search Bar */}
             <div className="flex-1 max-w-2xl">
@@ -236,7 +135,7 @@ export default function WebmailLayout({ children }: { children: React.ReactNode 
                 <button className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                   <Avatar className="h-8 w-8 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                     <AvatarImage src={profile?.avatarUrl || ""} />
-                    <AvatarFallback className="bg-webmail-primary text-white text-[10px] rounded-none">
+                    <AvatarFallback className="bg-background text-white text-[10px] rounded-none">
                       {userDisplayName.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>

@@ -4,9 +4,10 @@ import { MailService } from './mail.service.js';
 import { MailRepository } from './mail.repository.js';
 import { SesEmailService } from './ses-email.service.js';
 import { DomainsModule } from '../domains/domains.module.js';
+import { SmtpModule } from '../smtp/smtp.module.js';
 
 @Module({
-  imports: [DomainsModule],
+  imports: [DomainsModule, SmtpModule],
   controllers: [MailController],
   providers: [MailService, MailRepository, SesEmailService],
   exports: [MailService],

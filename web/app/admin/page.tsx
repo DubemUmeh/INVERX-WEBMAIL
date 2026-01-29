@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { Search, Mail, Calendar, MoreHorizontal, User, Filter, ArrowUpDown, Users, Loader2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api/client"
 import { useSession } from "@/lib/auth-client"
-import { useRouter } from "next/navigation"
+import { PasscodeDialog } from "@/components/PasscodeDialog"
 
 interface WaitlistEntry {
   id: string
@@ -14,43 +15,75 @@ interface WaitlistEntry {
 }
 
 export default function AdminPage() {
-  const { data: session, isPending } = useSession()
-  const router = useRouter()
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    if (!isPending && !session) {
-      router.push("/login")
-    }
-  }, [session, isPending, router])
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [adminToken, setAdminToken] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchWaitlist = async () => {
-      try {
-        const data = await api.get<WaitlistEntry[]>("/waitlist")
-        setWaitlist(Array.isArray(data) ? data : [])
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch waitlist")
-      } finally {
-        setIsLoading(false)
+  const fetchWaitlist = async (token: string) => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await api.get<any>("/waitlist", undefined, {
+        headers: {
+          "X-Admin-Token": token
+        }
+      })
+      console.log('waitlists data: ', response)
+      setWaitlist(Array.isArray(response.data) ? response.data : [])
+      return true
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch waitlist")
+      if (err.status === 401) {
+        setIsAuthenticated(false)
+        setAdminToken(null)
+        document.cookie = "admin_token=; max-age=0; path=/;"
       }
+      return false
+    } finally {
+      setIsLoading(false)
     }
-
-    if (session) {
-      fetchWaitlist()
-    }
-  }, [session])
-
-  if (isPending || (session && isLoading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    )
   }
 
-  if (!session) return null
+  const handleVerify = async (passcode: string) => {
+    try {
+      const response = await api.post<any>("/auth/admin/login", { passcode })
+      if (response.success && response.token) {
+        setAdminToken(response.token)
+        setIsAuthenticated(true)
+        
+        // Save to cookie with 5 minute expiry (300 seconds)
+        document.cookie = `admin_token=${response.token}; max-age=300; path=/; SameSite=Strict`
+        
+        await fetchWaitlist(response.token)
+        return response.token
+      }
+      return null
+    } catch (err) {
+      return null
+    }
+  }
+
+  useEffect(() => {
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`
+      const parts = value.split(`; ${name}=`)
+      if (parts.length === 2) return parts.pop()?.split(';').shift()
+      return null
+    }
+
+    const savedToken = getCookie("admin_token")
+    if (savedToken) {
+      setAdminToken(savedToken)
+      setIsAuthenticated(true)
+      fetchWaitlist(savedToken)
+    }
+  }, [])
+
+  if (!isAuthenticated) {
+    return <PasscodeDialog isOpen={true} onVerify={handleVerify} />
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white pb-24">
@@ -72,8 +105,12 @@ export default function AdminPage() {
             <button className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
               <Users className="h-4 w-4" />
               <span>Waitlists</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-medium border border-slate-200 dark:border-slate-700">
-                {waitlist.length}
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-medium border border-slate-200 dark:border-slate-700 min-w-[32px] flex justify-center">
+                {isLoading ? (
+                  <Skeleton className="h-3 w-3 rounded-full" />
+                ) : (
+                  waitlist.length
+                )}
               </span>
             </button>
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -104,7 +141,29 @@ export default function AdminPage() {
 
           {/* List Items */}
           <div className="divide-y divide-slate-200 dark:divide-slate-800">
-            {error ? (
+            {isLoading ? (
+              // Skeleton Rows
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+                  <div className="col-span-1 flex items-center">
+                    <Skeleton className="h-4 w-4 rounded" />
+                  </div>
+                  <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                  <div className="col-span-4 hidden sm:flex items-center">
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <div className="col-span-5 sm:col-span-2 flex justify-end">
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                  </div>
+                </div>
+              ))
+            ) : error ? (
               <div className="p-12 text-center">
                 <p className="text-red-500 font-medium">{error}</p>
               </div>
@@ -125,7 +184,7 @@ export default function AdminPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{entry.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{entry.email}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{entry.email}yes</p>
                     </div>
                   </div>
 

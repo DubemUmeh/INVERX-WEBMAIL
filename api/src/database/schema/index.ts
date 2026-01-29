@@ -61,6 +61,45 @@ export const attachmentStatusEnum = pgEnum('attachment_status', [
   'deleted',
 ]);
 
+// SMTP Encryption Modes
+export const smtpEncryptionEnum = pgEnum('smtp_encryption', [
+  'STARTTLS', // Port 587: Start unencrypted, upgrade via STARTTLS command
+  'SSL_TLS', // Port 465: Immediate TLS handshake on connection
+  'NONE', // Plaintext only - UNSAFE, for testing only
+]);
+
+// SMTP Configurations - Multiple per user with encrypted credentials
+export const smtpConfigurations = pgTable(
+  'smtp_configurations',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => generateUuidv7()),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(), // User-friendly label
+    host: varchar('host', { length: 255 }).notNull(),
+    port: integer('port').notNull(),
+    username: varchar('username', { length: 255 }),
+    // Password encrypted with AES-256-GCM (envelope encryption)
+    passwordEncrypted: text('password_encrypted'),
+    passwordIv: varchar('password_iv', { length: 32 }), // 16-byte IV as hex
+    passwordTag: varchar('password_tag', { length: 32 }), // GCM auth tag as hex
+    encryption: smtpEncryptionEnum('encryption').notNull().default('STARTTLS'),
+    requireTls: boolean('require_tls').default(true), // Fail if STARTTLS unavailable
+    timeoutSeconds: integer('timeout_seconds').default(30), // 5-120 range enforced in code
+    fromEmail: text('from_email').notNull(), // Sender address for this config
+    fromName: varchar('from_name', { length: 255 }),
+    isDefault: boolean('is_default').default(false),
+    lastTestedAt: timestamp('last_tested_at', { withTimezone: true }),
+    lastTestResult: varchar('last_test_result', { length: 50 }), // 'success' | 'failed'
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.fromEmail)], // Each from email unique per user
+);
+
 // Users Table
 export const users = pgTable('users', {
   id: uuid('id')
@@ -440,6 +479,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   contacts: many(contacts),
   messages: many(userMessages),
   apiKeys: many(apiKeys),
+  smtpConfigurations: many(smtpConfigurations),
 }));
 
 export const accountsRelations = relations(accounts, ({ one, many }) => ({

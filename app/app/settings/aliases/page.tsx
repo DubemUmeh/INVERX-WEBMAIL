@@ -21,16 +21,21 @@ export default function AliasesSettingsPage() {
   const fetchAliases = async () => {
     try {
       setIsLoading(true);
-      const domains = await domainsApi.getAll();
+      // const domains = await domainsApi.getAll();
       
-      const aliasesPromises = (domains || []).map((domain: any) => 
-        domainsApi.getAddresses(domain.id).then(addresses => 
-          (addresses || []).map((addr: any) => ({ ...addr, domainName: domain.name }))
-        )
-      );
+      // const aliasesPromises = (domains || []).map((domain: any) => 
+      //   domainsApi.getAddresses(domain.id).then(addresses => 
+      //     (addresses || []).map((addr: any) => ({ ...addr, domainName: domain.name }))
+      //   )
+      // );
 
-      const resolvedAliasesGroups = await Promise.all(aliasesPromises);
+      // const resolvedAliasesGroups = await Promise.all(aliasesPromises);
+      const resolvedAliasesGroups = await Promise.all([
+        domainsApi.getAllAddresses()
+      ]);
       const allAliases = resolvedAliasesGroups.flat();
+
+      // Fix this later to fetch aliases, what is is aliases (domain email address?), also fix the "Cretae alias" button... '/aliases/add'
       
       setAliases(allAliases);
     } catch (error) {

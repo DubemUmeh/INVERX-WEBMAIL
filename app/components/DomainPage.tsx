@@ -43,6 +43,7 @@ import { domainsApi } from '@/lib/api';
 import { Domain, DnsRecord, DomainAddress } from '@/types';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 interface DomainPageProps {
   showSidebar?: boolean;
@@ -449,12 +450,12 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                     <span className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Expires</span>
                     <span className="text-white font-medium">{domain.expiresAt ? new Date(domain.expiresAt).toLocaleDateString() : 'N/A'}</span>
                   </div>
-                  <div className="flex flex-col">
+                  {/* <div className="flex flex-col">
                     <span className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Auto-renew</span>
                     <span className={domain.autoRenew ? "text-emerald-400 font-medium" : "text-red-400 font-medium"}>
                       {domain.autoRenew ? 'On' : 'Off'}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -509,7 +510,7 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                         <p className="text-3xl font-bold text-white mb-1">{addresses.length > 0 ? 'Active' : 'Inactive'}</p>
                         <p className="text-sm text-text-secondary">{addresses.length} configured addresses</p>
                       </div>
-                      <div className="bg-surface-dark border border-surface-border p-5 rounded-xl">
+                      {/* <div className="bg-surface-dark border border-surface-border p-5 rounded-xl">
                           <div className="flex items-center gap-3 mb-2">
                             <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
                               <RefreshCw size={20} />
@@ -518,7 +519,7 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                         </div>
                         <p className="text-3xl font-bold text-white mb-1">{domain.status === 'active' ? 'Active' : 'Pending'}</p>
                         <p className="text-sm text-text-secondary">Expires {domain.expiresAt ? new Date(domain.expiresAt).toLocaleDateString() : 'N/A'}</p>
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Quick Actions */}
@@ -646,34 +647,45 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 max-w-xs xl:max-w-md group/value" onClick={() => handleCopy(record.value, 'Record Value')}>
-                                          <span className="text-sm text-text-secondary truncate font-mono" title={record.value}>{record.value}</span>
-                                          <button 
-                                            onClick={() => handleCopy(record.value, 'Record Value')}
-                                            className="opacity-0 group-hover/value:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-text-secondary hover:text-white"
-                                            title="Copy Value"
-                                          >
-                                              <Copy size={12} />
-                                          </button>
-                                        </div>
+                                      <div className="flex items-center gap-2 max-w-xs xl:max-w-md group/value" onClick={() => handleCopy(record.value, 'Record Value')}>
+                                        <span className="text-sm text-text-secondary truncate font-mono" title={record.value}>{record.value}</span>
+                                        <button 
+                                          onClick={() => handleCopy(record.value, 'Record Value')}
+                                          className="opacity-0 group-hover/value:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-text-secondary hover:text-white"
+                                          title="Copy Value"
+                                        >
+                                          <Copy size={12} />
+                                        </button>
+                                      </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-text-secondary">{record.ttl}</td>
                                     <td className="px-6 py-4">
-                                        {record.status === 'active' && (
-                                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                              <CheckCircle size={10} fill="currentColor" /> Active
-                                          </span>
-                                        )}
-                                        {record.status === 'pending' && (
-                                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                              <RefreshCw size={10} className="animate-spin" /> Pending
-                                          </span>
-                                        )}
+                                      {record.status === 'active' && (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                            <CheckCircle size={10} fill="currentColor" /> Active
+                                        </span>
+                                      )}
+                                      {record.status === 'pending' && (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                          <RefreshCw size={10} className="animate-spin" /> Pending
+                                        </span>
+                                      )}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="text-text-secondary hover:text-white p-1.5 hover:bg-white/5 rounded-lg transition-colors">
-                                          <MoreHorizontal size={18} />
-                                        </button>
+                                      <div onClick={(e) => e.preventDefault()}>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button className="text-text-secondary hover:text-white p-1.5 hover:bg-white/5 rounded-lg transition-colors">
+                                              <MoreHorizontal size={18} />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end" className="w-[80px] bg-background border-surface-border text-white">
+                                            <DropdownMenuItem className="cursor-pointer focus:bg-surface-hover focus:text-white" asChild>
+                                              <button>Verify</button>
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
                                     </td>
                                   </tr>
                               ))}
@@ -840,7 +852,7 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                 {/* 5. SETTINGS TAB */}
                 {activeTab === 'settings' && (
                   <div className="space-y-8">
-                      <div className="grid gap-6">
+                      {/* <div className="grid gap-6">
                         <div className="bg-surface-dark border border-surface-border rounded-xl p-6">
                             <h3 className="text-lg font-bold text-white mb-4">General Settings</h3>
                             <div className="flex items-center justify-between">
@@ -851,7 +863,7 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                               <Switch checked={true} />
                             </div>
                         </div>
-                      </div>
+                      </div> */}
 
                       <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
                         <h3 className="text-lg font-bold text-red-400 mb-2">Danger Zone</h3>
@@ -869,16 +881,18 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                                   Remove Domain
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-surface-dark border-surface-border">
+                              <AlertDialogContent className="bg-background border-surface-border">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle className="text-white">Remove Domain</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to remove <span className="font-medium text-white">{domainName}</span>? This will:
-                                    <ul className="list-disc list-inside mt-2 space-y-1">
-                                      <li>Stop all email delivery for this domain</li>
-                                      <li>Delete all associated email addresses</li>
-                                      <li>Remove all DNS configuration</li>
-                                    </ul>
+                                    <span>
+                                      Are you sure you want to remove <span className="font-medium text-white">{domainName}</span>? This will:
+                                      <ul className="list-disc list-inside mt-2 space-y-1">
+                                        <li>Stop all email delivery for this domain</li>
+                                        <li>Delete all associated email addresses</li>
+                                        <li>Remove all DNS configuration</li>
+                                      </ul>
+                                    </span>
                                     <p className="mt-2 text-red-400 font-medium">This action cannot be undone.</p>
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
