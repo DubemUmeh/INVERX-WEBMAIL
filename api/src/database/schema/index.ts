@@ -68,6 +68,30 @@ export const smtpEncryptionEnum = pgEnum('smtp_encryption', [
   'NONE', // Plaintext only - UNSAFE, for testing only
 ]);
 
+// Brevo Enums
+export const brevoConnectionStatusEnum = pgEnum('brevo_connection_status', [
+  'active',
+  'invalid',
+  'disconnected',
+]);
+
+export const brevoDomainStatusEnum = pgEnum('brevo_domain_status', [
+  'pending_dns',
+  'verifying',
+  'verified',
+  'failed',
+]);
+
+export const brevoDnsModeEnum = pgEnum('brevo_dns_mode', [
+  'cloudflare-managed',
+  'manual',
+]);
+
+export const brevoSendingTierEnum = pgEnum('brevo_sending_tier', [
+  'restricted',
+  'standard',
+]);
+
 // SMTP Configurations - Multiple per user with encrypted credentials
 export const smtpConfigurations = pgTable(
   'smtp_configurations',
@@ -99,6 +123,117 @@ export const smtpConfigurations = pgTable(
   },
   (t) => [unique().on(t.userId, t.fromEmail)], // Each from email unique per user
 );
+
+// DNS Record type for Brevo domains
+export interface BrevoDnsRecord {
+  type: 'TXT' | 'CNAME';
+  host: string;
+  value: string;
+  ttl?: number;
+  purpose: 'dkim' | 'spf' | 'dmarc' | 'brevo-code';
+}
+
+// Brevo Connections - Per account, encrypted API key
+export const brevoConnections = pgTable(
+  'brevo_connections',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => generateUuidv7()),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    // API key encrypted with AES-256-GCM (same as SMTP passwords)
+    apiKeyEncrypted: text('api_key_encrypted').notNull(),
+    apiKeyIv: varchar('api_key_iv', { length: 32 }).notNull(), // 16-byte IV as hex
+    apiKeyTag: varchar('api_key_tag', { length: 32 }).notNull(), // GCM auth tag as hex
+    status: brevoConnectionStatusEnum('status').default('active'),
+    sendingTier: brevoSendingTierEnum('sending_tier').default('restricted'),
+    email: text('email'), // Brevo account email for display
+    dailySendCount: integer('daily_send_count').default(0),
+    dailySendResetAt: timestamp('daily_send_reset_at', { withTimezone: true }),
+    lastValidatedAt: timestamp('last_validated_at', { withTimezone: true }),
+    isArchived: boolean('is_archived').default(false), // Soft delete
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [unique().on(t.accountId)],
+);
+
+// Brevo Domains - Domains added via Brevo API
+export const brevoDomains = pgTable(
+  'brevo_domains',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => generateUuidv7()),
+    connectionId: uuid('connection_id')
+      .notNull()
+      .references(() => brevoConnections.id, { onDelete: 'cascade' }),
+    domainName: varchar('domain_name', { length: 255 }).notNull(),
+    brevoDomainId: varchar('brevo_domain_id', { length: 255 }),
+    cloudflareZoneId: varchar('cloudflare_zone_id', { length: 255 }),
+    dnsMode: brevoDnsModeEnum('dns_mode').default('manual'),
+    status: brevoDomainStatusEnum('status').default('pending_dns'),
+    dkimVerified: boolean('dkim_verified').default(false),
+    spfVerified: boolean('spf_verified').default(false),
+    dmarcVerified: boolean('dmarc_verified').default(false),
+    dnsRecords: jsonb('dns_records').$type<BrevoDnsRecord[]>(), // Typed DNS records
+    nameservers: text('nameservers').array(), // Cloudflare nameservers
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+    isArchived: boolean('is_archived').default(false),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [unique().on(t.connectionId, t.domainName)],
+);
+
+// Brevo Senders - Verified sender emails
+export const brevoSenders = pgTable(
+  'brevo_senders',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => generateUuidv7()),
+    domainId: uuid('domain_id')
+      .notNull()
+      .references(() => brevoDomains.id, { onDelete: 'cascade' }),
+    brevoSenderId: varchar('brevo_sender_id', { length: 255 }),
+    email: text('email').notNull(),
+    name: varchar('name', { length: 255 }),
+    isVerified: boolean('is_verified').default(false),
+    complaintCount: integer('complaint_count').default(0),
+    isDisabled: boolean('is_disabled').default(false),
+    disabledReason: varchar('disabled_reason', { length: 255 }),
+    isArchived: boolean('is_archived').default(false),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [unique().on(t.domainId, t.email)],
+);
+
+// Brevo Send Logs - Audit trail for all sends
+export const brevoSendLogs = pgTable('brevo_send_logs', {
+  id: uuid('id')
+    .primaryKey()
+    .$defaultFn(() => generateUuidv7()),
+  connectionId: uuid('connection_id')
+    .notNull()
+    .references(() => brevoConnections.id, { onDelete: 'cascade' }),
+  senderId: uuid('sender_id')
+    .notNull()
+    .references(() => brevoSenders.id, { onDelete: 'cascade' }),
+  brevoMessageId: varchar('brevo_message_id', { length: 255 }),
+  toEmail: text('to_email').notNull(),
+  subject: text('subject'),
+  status: varchar('status', { length: 20 }).notNull(), // 'success' | 'failed'
+  errorMessage: text('error_message'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
 
 // Users Table
 export const users = pgTable('users', {
@@ -622,5 +757,47 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
     fields: [auditLogs.userId],
     references: [users.id],
+  }),
+}));
+
+// Brevo Relations
+export const brevoConnectionsRelations = relations(
+  brevoConnections,
+  ({ one, many }) => ({
+    account: one(accounts, {
+      fields: [brevoConnections.accountId],
+      references: [accounts.id],
+    }),
+    domains: many(brevoDomains),
+    sendLogs: many(brevoSendLogs),
+  }),
+);
+
+export const brevoDomainsRelations = relations(
+  brevoDomains,
+  ({ one, many }) => ({
+    connection: one(brevoConnections, {
+      fields: [brevoDomains.connectionId],
+      references: [brevoConnections.id],
+    }),
+    senders: many(brevoSenders),
+  }),
+);
+
+export const brevoSendersRelations = relations(brevoSenders, ({ one }) => ({
+  domain: one(brevoDomains, {
+    fields: [brevoSenders.domainId],
+    references: [brevoDomains.id],
+  }),
+}));
+
+export const brevoSendLogsRelations = relations(brevoSendLogs, ({ one }) => ({
+  connection: one(brevoConnections, {
+    fields: [brevoSendLogs.connectionId],
+    references: [brevoConnections.id],
+  }),
+  sender: one(brevoSenders, {
+    fields: [brevoSendLogs.senderId],
+    references: [brevoSenders.id],
   }),
 }));

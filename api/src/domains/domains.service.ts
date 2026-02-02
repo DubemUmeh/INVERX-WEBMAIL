@@ -14,6 +14,8 @@ import {
   DomainQueryDto,
 } from './dto/index.js';
 
+import { CloudflareService } from '../cloudflare/cloudflare.service.js';
+
 @Injectable()
 export class DomainsService {
   constructor(
@@ -21,6 +23,7 @@ export class DomainsService {
     private domainVerificationService: DomainVerificationService,
     private sesVerificationService: SesVerificationService,
     private sesSyncService: SesSyncService,
+    private cloudflareService: CloudflareService,
   ) {}
 
   async getDomains(accountId: string, query: DomainQueryDto) {
@@ -58,15 +61,69 @@ export class DomainsService {
         name: domainName,
       });
 
-      // 1. Verify Domain Identity with SES
+      // Handle Cloudflare-managed mode: Create zone and return nameservers
+      // This is for DNS control via Cloudflare - email provider (Brevo) integration comes later
+      if (
+        dto.dnsMode === 'cloudflare-managed' &&
+        this.cloudflareService.isAvailable()
+      ) {
+        console.log(
+          `[DomainsService] Creating Cloudflare zone for ${domainName}`,
+        );
+
+        try {
+          // Create or find existing Cloudflare zone
+          let zone;
+          try {
+            zone = await this.cloudflareService.createZone(domainName);
+          } catch (error: any) {
+            if (error.message?.includes('already exists')) {
+              zone = await this.cloudflareService.getZoneByName(domainName);
+            } else {
+              throw error;
+            }
+          }
+
+          if (zone) {
+            console.log(
+              `[DomainsService] Cloudflare zone created for ${domainName}, nameservers: ${zone.name_servers?.join(', ')}`,
+            );
+
+            // Return Cloudflare zone info with nameservers for user to configure at registrar
+            return {
+              id: domain.id,
+              name: domain.name,
+              status: 'pending',
+              verificationStatus: 'unverified',
+              dnsMode: 'cloudflare-managed',
+              cloudflare: {
+                zoneId: zone.id,
+                zoneStatus: zone.status,
+                nameservers: zone.name_servers || [],
+              },
+              message:
+                'Please update your domain nameservers at your registrar to the Cloudflare nameservers provided.',
+              createdAt: domain.createdAt,
+            };
+          }
+        } catch (error: any) {
+          console.error(
+            `[DomainsService] Cloudflare zone creation failed: ${error.message}`,
+          );
+          throw new BadRequestException(
+            `Failed to create Cloudflare zone: ${error.message}`,
+          );
+        }
+      }
+
+      // Manual mode: Use SES for email domain verification
+      // This is the legacy flow for users not using Cloudflare DNS management
       const verificationToken =
         await this.sesVerificationService.verifyDomainIdentity(domainName);
 
-      // 2. Get DKIM Tokens
       const dkimTokens =
         await this.sesVerificationService.getDkimTokens(domainName);
 
-      // 3. Construct DNS Records
       const dnsRecords: any = {
         spf: {
           type: 'TXT',
@@ -98,6 +155,7 @@ export class DomainsService {
         name: domain.name,
         status: 'pending',
         verificationStatus: 'unverified',
+        dnsMode: 'manual',
         dnsRecords,
         createdAt: domain.createdAt,
       };

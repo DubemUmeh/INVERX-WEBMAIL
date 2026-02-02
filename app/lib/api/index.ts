@@ -9,3 +9,4 @@ export * from "./settings";
 export * from "./webhooks";
 export * from "./api-keys";
 export * from "./audit-logs";
+export * from "./brevo";

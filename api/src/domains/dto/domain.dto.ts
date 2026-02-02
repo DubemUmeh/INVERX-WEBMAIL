@@ -3,6 +3,10 @@ import { IsString, IsOptional, IsBoolean, IsUrl } from 'class-validator';
 export class CreateDomainDto {
   @IsString()
   name: string;
+
+  @IsOptional()
+  @IsString()
+  dnsMode?: 'manual' | 'cloudflare-managed';
 }
 
 export class CreateAddressDto {

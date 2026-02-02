@@ -13,7 +13,8 @@ import {
   Monitor,
   Menu,
   ArrowLeft,
-  Settings
+  Settings,
+  Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -31,6 +32,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     { href: "/settings/rules", label: "Inbox Rules", icon: Inbox },
     { href: "/settings/notifications", label: "Notifications", icon: Bell },
     { href: "/settings/billing", label: "Billing", icon: CreditCard },
+    { href: "/settings/brevo", label: "Brevo", icon: Send },
   ];
 
   const NavContent = () => (

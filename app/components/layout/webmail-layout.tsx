@@ -94,7 +94,7 @@ export default function WebmailLayout({ children }: { children: React.ReactNode 
             {/* Mobile Menu Trigger */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden shrink-0 -ml-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">
+                <Button variant="ghost" size="icon" className="lg:hidden shrink-0 -ml-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5" suppressHydrationWarning>
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
@@ -132,7 +132,7 @@ export default function WebmailLayout({ children }: { children: React.ReactNode 
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                <button className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" suppressHydrationWarning>
                   <Avatar className="h-8 w-8 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                     <AvatarImage src={profile?.avatarUrl || ""} />
                     <AvatarFallback className="bg-background text-white text-[10px] rounded-none">

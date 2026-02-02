@@ -23,6 +23,8 @@ import { domainsApi } from '@/lib/api';
 import { Domain } from '@/types';
 import { toast } from 'sonner';
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.ReactNode }) {
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -68,6 +70,9 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
       </div>
     );
   }
+
+  const domainName = domains[0].name;
+  const domainId = domains[0].id;
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-white min-h-screen text-base">
@@ -193,8 +198,48 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-surface-border" />
                         <DropdownMenuItem className="cursor-pointer text-red-400 focus:bg-red-500/10 focus:text-red-400 flex items-center gap-2">
-                            <Trash2 size={14} />
-                            <span>Delete Domain</span>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" onClick={(e) => e.stopPropagation()} className="bg-red-600 hover:bg-red-700 text-white">
+                                <Trash2 size={16} className="mr-2" />
+                                Remove Domain
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-background border-surface-border">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-white">Remove Domain</AlertDialogTitle>
+                                <AlertDialogDescription asChild>
+                                  <div>
+                                    <span>
+                                      Are you sure you want to remove <span className="font-medium text-white">{domainName}</span>? This will:
+                                      <ul className="list-disc list-inside mt-2 space-y-1">
+                                        <li>Stop all email delivery for this domain</li>
+                                        <li>Delete all associated email addresses</li>
+                                        <li>Remove all DNS configuration</li>
+                                      </ul>
+                                    </span>
+                                    <p className="mt-2 text-red-400 font-medium">This action cannot be undone.</p>
+                                  </div>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-surface-light border-surface-border text-white hover:bg-surface-hover">Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                  onClick={() => {
+                                    domainsApi.delete(domainId)
+                                      .then(() => {
+                                        toast.success('Domain removed successfully');
+                                        window.location.href = '/domains';
+                                      })
+                                      .catch(() => toast.error('Failed to remove domain'));
+                                  }}
+                                >
+                                  Remove Domain
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

@@ -164,7 +164,7 @@ export default function SecuritySettingsPage() {
       {/* Two-Factor Auth Section */}
       <section className="bg-white dark:bg-[#121212] rounded-xl border border-[#ededed] dark:border-gray-800 shadow-sm overflow-hidden mt-6">
         <div className="px-6 py-5 border-b border-[#ededed] dark:border-gray-800 flex justify-between items-center">
-          <h3 className="text-[#141414] dark:text-white text-lg font-bold leading-tight">Two-Factor Authentication</h3>
+          <h3 className="text-[#141414] dark:text-white text-sm md:text-lg font-bold leading-tight">Two-Factor Authentication</h3>
           {security?.twoFactorEnabled ? (
             <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200 dark:border-green-800 flex items-center">
               <ShieldCheck className="w-3 h-3 mr-1" /> Enabled

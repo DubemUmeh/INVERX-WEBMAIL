@@ -7,8 +7,10 @@ import { DomainVerificationService } from './domain-verification.service.js';
 import { SesClientService } from './ses/ses.client.js';
 import { SesVerificationService } from './ses/ses-verification.service.js';
 import { SesSyncService } from './ses/ses-sync.service.js';
+import { CloudflareModule } from '../cloudflare/cloudflare.module.js';
 
 @Module({
+  imports: [CloudflareModule],
   controllers: [DomainsController],
   providers: [
     DomainsService,
@@ -20,6 +22,7 @@ import { SesSyncService } from './ses/ses-sync.service.js';
   ],
   exports: [
     DomainsService,
+    DomainsRepository,
     DomainVerificationService,
     SesVerificationService,
     SesSyncService,

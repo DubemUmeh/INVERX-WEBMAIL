@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // Database
 import { DatabaseModule } from './database/database.module.js';
@@ -28,6 +29,8 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
 import { WaitlistModule } from './waitlist/waitlist.module.js';
 import { SmtpModule } from './smtp/smtp.module.js';
+import { BrevoModule } from './brevo/brevo.module.js';
+import { CloudflareModule } from './cloudflare/cloudflare.module.js';
 
 @Module({
   imports: [
@@ -36,6 +39,9 @@ import { SmtpModule } from './smtp/smtp.module.js';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
+
+    // Scheduling (for cron jobs)
+    ScheduleModule.forRoot(),
 
     // Database
     DatabaseModule,
@@ -53,6 +59,8 @@ import { SmtpModule } from './smtp/smtp.module.js';
     AttachmentsModule,
     WaitlistModule,
     SmtpModule,
+    BrevoModule,
+    CloudflareModule,
   ],
   providers: [
     // Global validation pipe

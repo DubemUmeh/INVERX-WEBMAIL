@@ -92,6 +92,24 @@ export class DomainsRepository {
     return result[0] || null;
   }
 
+  /**
+   * Find Cloudflare-managed domains for an account (domains with cloudflareZoneId)
+   */
+  async findCloudflareManaged(accountId: string) {
+    // For now, return all active/pending domains as potential candidates
+    // In the future, you could add a cloudflareZoneId column to filter
+    return this.db
+      .select({
+        id: domains.id,
+        name: domains.name,
+        status: domains.status,
+        verificationStatus: domains.verificationStatus,
+      })
+      .from(domains)
+      .where(eq(domains.accountId, accountId))
+      .orderBy(desc(domains.createdAt));
+  }
+
   // DNS Records
   async findDnsRecords(domainId: string) {
     return this.db

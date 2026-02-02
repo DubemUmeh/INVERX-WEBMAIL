@@ -4,22 +4,10 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Send, 
-  X, 
-  Bold,
-  Italic,
-  Underline,
-  List,
-  Link as LinkIcon,
-  Paperclip,
-  Image as ImageIcon,
-  Clock,
-  Lock,
-  BarChart,
-  Lightbulb,
-  Dock,
-  Check,
-  Loader2,
-  Server
+  X,
+  Check, 
+  Loader2, 
+  Server 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,26 +20,38 @@ import {
 import { mailApi } from "@/lib/api/mail";
 import { domainsApi } from "@/lib/api/domains";
 import { smtpApi } from "@/lib/api/smtp";
+import { brevoApi } from "@/lib/api/brevo";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(() => import("@/components/rich-text-editor"), { 
+  ssr: false,
+  loading: () => <div className="h-64 bg-slate-50 dark:bg-slate-900 animate-pulse rounded-md" />
+});
 
 interface EmailAddress {
+  id: string;
   email: string;
   domainId?: string; // Optional for SMTP
   smtpId?: string;   // New field for SMTP
   displayName?: string;
-  type: 'domain' | 'smtp';
+  type: 'domain' | 'smtp' | 'brevo';
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export default function ComposePage() {
   const router = useRouter();
   
-  // Form state
-  const [fromEmail, setFromEmail] = useState("");
-  const [toRecipients, setToRecipients] = useState<string[]>([]);
-  const [ccRecipients, setCcRecipients] = useState<string[]>([]);
-  const [bccRecipients, setBccRecipients] = useState<string[]>([]);
-  const [subject, setSubject] = useState("");
-  const [bodyText, setBodyText] = useState("");
-  const [bodyHtml, setBodyHtml] = useState("");
+  // Grouped Form state
+  const [formState, setFormState] = useState({
+    fromEmail: "",
+    toRecipients: [] as string[],
+    ccRecipients: [] as string[],
+    bccRecipients: [] as string[],
+    subject: "",
+    bodyText: "",
+    bodyHtml: "",
+  });
   
   // UI state
   const [toInput, setToInput] = useState("");
@@ -60,24 +60,28 @@ export default function ComposePage() {
   const [ccInput, setCcInput] = useState("");
   const [bccInput, setBccInput] = useState("");
   
-  // Available email addresses from verified domains
+  // Available email addresses from verified domains and connected accounts
   const [availableAddresses, setAvailableAddresses] = useState<EmailAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   
-  // Sending state
-  const [isSending, setIsSending] = useState(false);
-  const [isSavingDraft, setIsSavingDraft] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  // Status state
+  const [status, setStatus] = useState({
+    isSending: false,
+    isSavingDraft: false,
+    error: null as string | null,
+    success: null as string | null,
+    editorKey: 0,
+  });
 
-  // Fetch available email addresses (Domains + SMTP)
+  // Fetch available email addresses (Domains + SMTP + Brevo)
   useEffect(() => {
     async function fetchAddresses() {
       try {
         setLoadingAddresses(true);
-        const [domains, smtpConfigs] = await Promise.all([
+        const [domains, smtpConfigs, brevoStatus] = await Promise.all([
           domainsApi.getAll(),
-          smtpApi.getAll().catch(() => []) // SMTP is optional, don't fail if fetching fails
+          smtpApi.getAll().catch(() => []), // SMTP is optional
+          brevoApi.getStatus().catch(() => ({ connected: false })) // Brevo is optional
         ]);
         
         // Collect all addresses
@@ -87,6 +91,7 @@ export default function ComposePage() {
         if (Array.isArray(smtpConfigs)) {
           for (const config of smtpConfigs) {
             addresses.push({
+              id: `smtp-${config.id}`,
               email: config.fromEmail,
               smtpId: config.id,
               displayName: config.fromName || config.name,
@@ -102,11 +107,9 @@ export default function ComposePage() {
               const domainAddresses = await domainsApi.getAddresses(domain.id);
               if (Array.isArray(domainAddresses)) {
                 for (const addr of domainAddresses) {
-                  // Avoid duplicates if SMTP matches domain address (SMTP takes precedence for sending preference usually, 
-                  // but here we just want unique options. If they are the same email, we might want to show both or merge.
-                  // For simplicity, let's dedup by email)
-                  if (!addresses.some(a => a.email === addr.email)) {
+                  if (!addresses.some(a => a.email === addr.email && a.type === 'domain')) {
                     addresses.push({
+                      id: `domain-${domain.id}-${addr.email}`,
                       email: addr.email,
                       domainId: domain.id,
                       displayName: addr.displayName,
@@ -118,12 +121,54 @@ export default function ComposePage() {
             }
           }
         }
+
+        // 3. Add Brevo addresses
+        if (brevoStatus.connected) {
+          try {
+            const [brevoSenders, brevoDomains] = await Promise.all([
+              brevoApi.getAccountSenders(),
+              brevoApi.getAccountDomains()
+            ]);
+            console.log('available senders: ', brevoSenders);
+            console.log('available domains: ', brevoDomains);
+
+            for (const sender of brevoSenders) {
+              // Only include active senders
+              if (!sender.active) continue;
+
+              // Check if domain is authenticated
+              const senderDomain = sender.email.split('@')[1];
+              const domainInfo = brevoDomains.find(d => d.domainName === senderDomain);
+              
+              const isAuthenticated = domainInfo?.authenticated || false;
+              
+              // Allow duplicates if different type (e.g. SMTP vs Brevo)
+              // We use unique ID to distinguish
+              const id = `brevo-${sender.email}`;
+              
+              if (!addresses.some(a => a.id === id)) {
+                addresses.push({
+                  id,
+                  email: sender.email,
+                  displayName: sender.name,
+                  type: 'brevo',
+                  disabled: !isAuthenticated,
+                  disabledReason: !isAuthenticated ? 'Domain verification pending' : undefined
+                });
+              }
+            }
+          } catch (e) {
+            console.error("Failed to fetch Brevo senders:", e);
+          }
+        }
         
         setAvailableAddresses(addresses);
         
         // Set default from email if available and not set
-        if (!fromEmail && addresses.length > 0) {
-          setFromEmail(addresses[0].email);
+        if (!formState.fromEmail && addresses.length > 0) {
+          // Default to first active non-disabled address if possible
+          const defaultAddr = addresses.find(a => !a.disabled) || addresses[0];
+          setFormState(prev => ({ ...prev, fromEmail: defaultAddr.id }));
         }
       } catch (err) {
         console.error("Failed to fetch email addresses:", err);
@@ -133,38 +178,50 @@ export default function ComposePage() {
     }
     
     fetchAddresses();
-  }, []);
+  }, [formState.fromEmail]);
 
   // Handle adding recipient
-  const addRecipient = (type: "to" | "cc" | "bcc", email: string) => {
+  const addRecipient = React.useCallback((type: "to" | "cc" | "bcc", email: string) => {
     const trimmed = email.trim();
     if (!trimmed || !trimmed.includes("@")) return;
     
-    if (type === "to" && !toRecipients.includes(trimmed)) {
-      setToRecipients([...toRecipients, trimmed]);
-      setToInput("");
-    } else if (type === "cc" && !ccRecipients.includes(trimmed)) {
-      setCcRecipients([...ccRecipients, trimmed]);
-      setCcInput("");
-    } else if (type === "bcc" && !bccRecipients.includes(trimmed)) {
-      setBccRecipients([...bccRecipients, trimmed]);
-      setBccInput("");
+    const fieldMap = {
+      to: "toRecipients",
+      cc: "ccRecipients",
+      bcc: "bccRecipients"
+    } as const;
+
+    const field = fieldMap[type];
+
+    if (!formState[field].includes(trimmed)) {
+      setFormState(prev => ({
+        ...prev,
+        [field]: [...prev[field], trimmed]
+      }));
+      if (type === "to") setToInput("");
+      else if (type === "cc") setCcInput("");
+      else if (type === "bcc") setBccInput("");
     }
-  };
+  }, [formState]);
 
   // Handle removing recipient
-  const removeRecipient = (type: "to" | "cc" | "bcc", email: string) => {
-    if (type === "to") {
-      setToRecipients(toRecipients.filter((e) => e !== email));
-    } else if (type === "cc") {
-      setCcRecipients(ccRecipients.filter((e) => e !== email));
-    } else if (type === "bcc") {
-      setBccRecipients(bccRecipients.filter((e) => e !== email));
-    }
-  };
+  const removeRecipient = React.useCallback((type: "to" | "cc" | "bcc", email: string) => {
+    const fieldMap = {
+      to: "toRecipients",
+      cc: "ccRecipients",
+      bcc: "bccRecipients"
+    } as const;
+
+    const field = fieldMap[type];
+    
+    setFormState(prev => ({
+      ...prev,
+      [field]: prev[field].filter((e) => e !== email)
+    }));
+  }, []);
 
   // Handle key press in recipient input
-  const handleRecipientKeyDown = (
+  const handleRecipientKeyDown = React.useCallback((
     e: React.KeyboardEvent<HTMLInputElement>,
     type: "to" | "cc" | "bcc",
     value: string
@@ -173,107 +230,177 @@ export default function ComposePage() {
       e.preventDefault();
       addRecipient(type, value);
     }
-  };
+  }, [addRecipient]);
 
-  // Get email body from contentEditable div
-  const getEmailBody = () => {
-    const editor = document.querySelector(".editor-textarea") as HTMLElement;
-    if (editor) {
-      return {
-        bodyText: editor.innerText,
-        bodyHtml: editor.innerHTML,
-      };
-    }
-    return { bodyText, bodyHtml };
-  };
+  // Handle editor change
+  const handleEditorChange = React.useCallback((html: string, text: string) => {
+    setFormState(prev => {
+      // Only update if content actually changed to avoid unnecessary renders
+      if (prev.bodyHtml === html && prev.bodyText === text) return prev;
+      return { ...prev, bodyHtml: html, bodyText: text };
+    });
+  }, []);
+
+
+
 
   // Send email
   const handleSend = async () => {
-    setError(null);
-    setSuccess(null);
+    setStatus(prev => ({ ...prev, error: null, success: null }));
     
     // Validation
-    if (!fromEmail) {
-      setError("Please select a sender email address");
+    if (!formState.fromEmail) {
+      setStatus(prev => ({ ...prev, error: "Please select a sender email address" }));
       return;
     }
     
-    if (toRecipients.length === 0) {
-      setError("Please add at least one recipient");
+    if (formState.toRecipients.length === 0) {
+      setStatus(prev => ({ ...prev, error: "Please add at least one recipient" }));
       return;
     }
     
-    if (!subject.trim()) {
-      setError("Please enter a subject");
+    if (!formState.subject.trim()) {
+      setStatus(prev => ({ ...prev, error: "Please enter a subject" }));
       return;
     }
     
-    const { bodyText: text, bodyHtml: html } = getEmailBody();
-    
-    if (!text.trim()) {
-      setError("Please enter a message body");
+    if (!formState.bodyText.trim()) {
+      setStatus(prev => ({ ...prev, error: "Please enter a message body" }));
       return;
     }
     
-    setIsSending(true);
+    setStatus(prev => ({ ...prev, isSending: true }));
     
     try {
-      const result = await mailApi.sendMessage({
-        from: fromEmail,
-        to: toRecipients,
-        cc: ccRecipients.length > 0 ? ccRecipients : undefined,
-        bcc: bccRecipients.length > 0 ? bccRecipients : undefined,
-        subject: subject,
-        bodyText: text,
-        bodyHtml: html,
+      // Find selected sender by ID
+      // formState.fromEmail now holds the ID (e.g. "brevo-email@example.com")
+      const selectedSender = availableAddresses.find(a => a.id === formState.fromEmail);
+      
+      if (!selectedSender) {
+        // Fallback for safety or if ID scheme changed
+        console.error("Selected sender not found by ID:", formState.fromEmail);
+        setStatus(prev => ({ ...prev, error: "Invalid sender selection" }));
+        return;
+      }
+
+      const senderEmail = selectedSender.email;
+      const senderDisplayName = selectedSender.displayName;
+      const senderType = selectedSender.type || 'domain';
+
+      if (senderType === 'brevo') {
+        await brevoApi.sendEmailWithSender({
+          senderEmail: senderEmail,
+          senderName: senderDisplayName,
+          to: formState.toRecipients[0], // Brevo sends individually or handles batch differently, but here we assume simple send. For multiple recipients we might need loop or check API. Standard mailApi handles list.
+          // Note: Our backend sendEmailWithSender takes 'to' as string. 
+          // If we have multiple recipients, we should probably loop or join. 
+          // Let's assume singular 'to' for initial brevo impl or just take first one as per interface mismatch risk.
+          // Actually, our API takes 'to' string. If we want multiple, we need to iterate.
+          // Let's iterate for safety if multiple recipients.
+          subject: formState.subject,
+          htmlContent: formState.bodyHtml,
+          textContent: formState.bodyText,
+        });
+
+        // If multiple recipients for Brevo, we'd need loop.
+        // But let's check mailApi.sendMessage implementation. It likely handles array.
+        // For Brevo, if we want to support multiple, we should likely update backend to accept array or loop here.
+        // For now, let's keep it simple and assume single TO for MVP or just send to all via loop if needed.
+        // Actually, mailApi.sendMessage takes 'to: string[]'.
+        // Let's update backend DTO to match or handle here.
+        // Wait, backend 'sendEmailWithSender' takes 'to: string'.
+        // So I must loop here for Brevo if multiple recipients.
+        
+        if (formState.toRecipients.length > 1) {
+           // Send to others
+           const otherRecipients = formState.toRecipients.slice(1);
+           await Promise.all(otherRecipients.map(to => 
+             brevoApi.sendEmailWithSender({
+                senderEmail: senderEmail,
+                senderName: senderDisplayName,
+                to: to,
+                subject: formState.subject,
+                htmlContent: formState.bodyHtml,
+                textContent: formState.bodyText,
+             })
+           ));
+        }
+
+      } else {
+        // Domain or SMTP sending
+        // Pass the extra params if SMTP
+        await mailApi.sendMessage({
+          from: senderEmail, // Use the actual email
+          to: formState.toRecipients,
+          cc: formState.ccRecipients,
+          bcc: formState.bccRecipients,
+          subject: formState.subject,
+          text: formState.bodyText,
+          html: formState.bodyHtml,
+          domainId: selectedSender.domainId, // Pass domainId if available
+          smtpConfigId: selectedSender.smtpId, // Pass smtpId if available
+        });
+      }
+      
+      setStatus(prev => ({ 
+        ...prev, 
+        success: "Email sent successfully!",
+        editorKey: prev.editorKey + 1
+      }));
+
+      // Reset form
+      setFormState({
+        fromEmail: availableAddresses[0]?.id || "", // Reset to ID
+        toRecipients: [],
+        ccRecipients: [],
+        bccRecipients: [],
+        subject: "",
+        bodyText: "",
+        bodyHtml: "",
       });
-      
-      setSuccess("Email sent successfully!");
-      
+
       // Redirect to sent folder after a short delay
       setTimeout(() => {
         router.push("/mail/sent");
       }, 1500);
     } catch (err: any) {
-      setError(err.message || "Failed to send email. Please try again.");
+      setStatus(prev => ({ ...prev, error: err.message || "Failed to send email. Please try again." }));
     } finally {
-      setIsSending(false);
+      setStatus(prev => ({ ...prev, isSending: false }));
     }
   };
 
   // Save draft
   const handleSaveDraft = async () => {
-    setError(null);
-    setIsSavingDraft(true);
-    
-    const { bodyText: text, bodyHtml: html } = getEmailBody();
+    setStatus(prev => ({ ...prev, error: null }));
+    setStatus(prev => ({ ...prev, isSavingDraft: true }));
     
     try {
       await mailApi.createDraft({
-        to: toRecipients,
-        cc: ccRecipients.length > 0 ? ccRecipients : undefined,
-        subject: subject,
-        bodyText: text,
-        bodyHtml: html,
+        to: formState.toRecipients,
+        cc: formState.ccRecipients.length > 0 ? formState.ccRecipients : undefined,
+        subject: formState.subject,
+        bodyText: formState.bodyText,
+        bodyHtml: formState.bodyHtml,
       });
       
-      setSuccess("Draft saved!");
+      setStatus(prev => ({ ...prev, success: "Draft saved!" }));
       
       // Clear success after a few seconds
-      setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setStatus(prev => ({ ...prev, success: null })), 3000);
     } catch (err: any) {
-      setError(err.message || "Failed to save draft. Please try again.");
+      setStatus(prev => ({ ...prev, error: err.message || "Failed to save draft. Please try again." }));
     } finally {
-      setIsSavingDraft(false);
+      setStatus(prev => ({ ...prev, isSavingDraft: false }));
     }
   };
 
   // Discard and go back
   const handleDiscard = () => {
     if (
-      toRecipients.length > 0 ||
-      subject.trim() ||
-      getEmailBody().bodyText.trim()
+      formState.toRecipients.length > 0 ||
+      formState.subject.trim() ||
+      formState.bodyText.trim()
     ) {
       if (!confirm("Discard this message?")) return;
     }
@@ -287,7 +414,7 @@ export default function ComposePage() {
   };
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white h-full flex flex-col font-display selection:bg-black selection:text-white overflow-y-auto">
+    <div className="bg-background-light dark:bg-background-dark text-slate-100 dark:text-white h-full flex flex-col font-display selection:bg-gray-100 selection:text-black overflow-y-auto">
       <main className="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6">
         {/* Left Column: Main Composer */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -296,18 +423,18 @@ export default function ComposePage() {
             <h1 className="text-3xl font-bold text-webmail-primary dark:text-white tracking-tight">
               New Message
             </h1>
-            {success && (
+            {status.success && (
               <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
                 <Check className="w-4 h-4" />
-                {success}
+                {status.success}
               </span>
             )}
           </div>
 
           {/* Error Message */}
-          {error && (
+          {status.error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
-              {error}
+              {status.error}
             </div>
           )}
 
@@ -330,24 +457,41 @@ export default function ComposePage() {
                       </span>
                     ) : (
                       <>
-                        <Select value={fromEmail} onValueChange={setFromEmail}>
+                        <Select 
+                          value={formState.fromEmail} 
+                          onValueChange={(val) => setFormState(prev => ({ ...prev, fromEmail: val }))}
+                        >
                           <SelectTrigger className="w-auto border-none shadow-none p-0 h-auto bg-transparent focus:ring-0 text-webmail-primary dark:text-white font-medium text-sm gap-2">
                             <SelectValue placeholder="Select email" />
                           </SelectTrigger>
                           <SelectContent>
                             {availableAddresses.map((addr) => (
-                              <SelectItem key={addr.email} value={addr.email}>
-                                <div className="flex items-center justify-between w-full min-w-[200px]">
-                                  <span>
-                                    {addr.displayName
-                                      ? `${addr.displayName} <${addr.email}>`
-                                      : addr.email}
-                                  </span>
-                                  {addr.type === 'smtp' && (
-                                    <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-1.5 py-0.5 rounded ml-2 uppercase tracking-wider">
-                                      SMTP
+                              <SelectItem key={addr.id} value={addr.id} disabled={addr.disabled}>
+                                <div className="flex items-center justify-between w-full min-w-[200px] opacity-100">
+                                  <div className="flex items-center gap-2">
+                                    <span className={addr.disabled ? "text-neutral-400 dark:text-neutral-500" : ""}>
+                                      {addr.displayName
+                                        ? `${addr.displayName} <${addr.email}>`
+                                        : addr.email}
                                     </span>
-                                  )}
+                                    {addr.disabled && (
+                                      <span className="text-[10px] text-orange-500 border border-orange-200 bg-orange-50 px-1 rounded">
+                                        {addr.disabledReason}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center">
+                                    {addr.type === 'smtp' && (
+                                      <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-1.5 py-0.5 rounded ml-2 uppercase tracking-wider">
+                                        SMTP
+                                      </span>
+                                    )}
+                                    {addr.type === 'brevo' && (
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded ml-2 uppercase tracking-wider ${addr.disabled ? 'bg-neutral-100 text-neutral-400' : 'bg-blue-100 dark:bg-blue-900 text-blue-500'}`}>
+                                        Brevo
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </SelectItem>
                             ))}
@@ -355,17 +499,34 @@ export default function ComposePage() {
                         </Select>
                         
                         {/* Status Indicator */}
-                        {availableAddresses.find(a => a.email === fromEmail)?.type === 'smtp' ? (
-                          <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full text-xs font-medium border border-indigo-100 dark:border-indigo-900">
-                            <Server className="w-3.5 h-3.5" />
-                            <span>SMTP</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full text-xs font-medium border border-green-100 dark:border-green-900">
-                            <Check className="w-3.5 h-3.5 fill-current" />
-                            <span>Verified</span>
-                          </div>
-                        )}
+                        {(() => {
+                           // Look up by ID instead of email
+                           const selected = availableAddresses.find(a => a.id === formState.fromEmail);
+                           const type = selected?.type;
+                           
+                           if (type === 'smtp') {
+                             return (
+                               <div className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full text-xs font-medium border border-indigo-100 dark:border-indigo-900">
+                                 <Server className="w-3.5 h-3.5" />
+                                 <span>SMTP</span>
+                               </div>
+                             );
+                           } else if (type === 'brevo') {
+                             return (
+                               <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full text-xs font-medium border border-blue-100 dark:border-blue-900">
+                                 <Send className="w-3.5 h-3.5" />
+                                 <span>Brevo</span>
+                               </div>
+                             );
+                           } else {
+                             return (
+                               <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full text-xs font-medium border border-green-100 dark:border-green-900">
+                                 <Check className="w-3.5 h-3.5 fill-current" />
+                                 <span>Verified</span>
+                               </div>
+                             );
+                           }
+                        })()}
                       </>
                     )}
                   </div>
@@ -378,7 +539,7 @@ export default function ComposePage() {
                   To
                 </label>
                 <div className="flex flex-wrap gap-2 items-center min-h-[32px]">
-                  {toRecipients.map((email) => (
+                  {formState.toRecipients.map((email) => (
                     <div
                       key={email}
                       className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-full border border-neutral-200 dark:border-neutral-700 group cursor-default"
@@ -436,7 +597,7 @@ export default function ComposePage() {
                     Cc
                   </label>
                   <div className="flex flex-wrap gap-2 items-center min-h-[32px]">
-                    {ccRecipients.map((email) => (
+                    {formState.ccRecipients.map((email) => (
                       <div
                         key={email}
                         className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-full border border-neutral-200 dark:border-neutral-700"
@@ -474,7 +635,7 @@ export default function ComposePage() {
                     Bcc
                   </label>
                   <div className="flex flex-wrap gap-2 items-center min-h-[32px]">
-                    {bccRecipients.map((email) => (
+                    {formState.bccRecipients.map((email) => (
                       <div
                         key={email}
                         className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-full border border-neutral-200 dark:border-neutral-700"
@@ -516,71 +677,20 @@ export default function ComposePage() {
                   className="w-full bg-transparent border-none p-0 text-lg font-semibold focus:ring-0 placeholder:text-neutral-300 text-webmail-primary dark:text-white outline-none"
                   type="text"
                   placeholder="Enter subject..."
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  value={formState.subject}
+                  onChange={(e) => setFormState(prev => ({ ...prev, subject: e.target.value }))}
                 />
               </div>
             </div>
 
-            {/* Formatting Toolbar */}
-            <div className="px-6 py-2 bg-neutral-50 dark:bg-neutral-900/30 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-1 overflow-x-auto scrollbar-hide">
-              <button
-                className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="Bold"
-              >
-                <Bold className="w-5 h-5" />
-              </button>
-              <button
-                className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="Italic"
-              >
-                <Italic className="w-5 h-5" />
-              </button>
-              <button
-                className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="Underline"
-              >
-                <Underline className="w-5 h-5" />
-              </button>
-              <div className="w-px h-5 bg-neutral-300 dark:bg-neutral-700 mx-1"></div>
-              <button
-                className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="List"
-              >
-                <List className="w-5 h-5" />
-              </button>
-              <button
-                className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="Link"
-              >
-                <LinkIcon className="w-5 h-5" />
-              </button>
-              <div className="w-px h-5 bg-neutral-300 dark:bg-neutral-700 mx-1"></div>
-              <button
-                className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="Attach File"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
-              <button
-                className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="Insert Image"
-              >
-                <ImageIcon className="w-5 h-5" />
-              </button>
-              <div className="ml-auto text-xs text-neutral-400">
-                Markdown supported
-              </div>
-            </div>
-
             {/* Rich Text Editor Area */}
-            <div className="flex-1 p-6 overflow-y-auto cursor-text">
-              <div
-                className="editor-textarea outline-none h-full w-full text-base leading-relaxed text-neutral-800 dark:text-neutral-200"
-                contentEditable
-                suppressContentEditableWarning
-                data-placeholder="Write your message..."
-              ></div>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <RichTextEditor
+                key={status.editorKey}
+                onChange={handleEditorChange}
+                className="h-full"
+                placeholder="Write your message..."
+              />
             </div>
 
             {/* Bottom Action Bar */}
@@ -588,10 +698,10 @@ export default function ComposePage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleSend}
-                  disabled={isSending || availableAddresses.length === 0}
+                  disabled={status.isSending || availableAddresses.length === 0}
                   className="bg-black dark:bg-white dark:text-black hover:bg-black/90 text-white px-6 py-2.5 rounded-lg font-medium shadow-lg shadow-black/10 flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSending ? (
+                  {status.isSending ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Sending...
@@ -605,10 +715,10 @@ export default function ComposePage() {
                 </button>
                 <button
                   onClick={handleSaveDraft}
-                  disabled={isSavingDraft}
+                  disabled={status.isSavingDraft}
                   className="text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-4 py-2.5 rounded-lg font-medium border border-neutral-200 dark:border-neutral-700 transition-colors disabled:opacity-50"
                 >
-                  {isSavingDraft ? (
+                  {status.isSavingDraft ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
                       Saving...

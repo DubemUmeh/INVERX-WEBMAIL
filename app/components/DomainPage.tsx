@@ -884,16 +884,16 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                               <AlertDialogContent className="bg-background border-surface-border">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle className="text-white">Remove Domain</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    <span>
+                                  <AlertDialogDescription asChild={true}>
+                                    <div>
                                       Are you sure you want to remove <span className="font-medium text-white">{domainName}</span>? This will:
                                       <ul className="list-disc list-inside mt-2 space-y-1">
                                         <li>Stop all email delivery for this domain</li>
                                         <li>Delete all associated email addresses</li>
                                         <li>Remove all DNS configuration</li>
                                       </ul>
-                                    </span>
-                                    <p className="mt-2 text-red-400 font-medium">This action cannot be undone.</p>
+                                      <p className="mt-2 text-red-400 font-medium">This action cannot be undone.</p>
+                                    </div>
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
