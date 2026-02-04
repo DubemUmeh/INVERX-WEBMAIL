@@ -231,12 +231,29 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
 
   // Load DNS records when tab is active
   useEffect(() => {
-    if ((activeTab === 'dns-records' || activeTab === 'dns') && domainId) {
-      domainsApi.getDnsRecords(domainId)
-        .then((response) => setDnsRecords(response.storedRecords))
-        .catch(() => toast.error('Failed to load DNS records'));
+    if ((activeTab === 'dns-records' || activeTab === 'dns') && domainId && domain) {
+      const loadDnsRecords = async () => {
+        try {
+          // Check if domain is Cloudflare-managed
+          if (domain.cloudflare?.mode === 'managed') {
+            // Fetch live DNS records from Cloudflare
+            const response = await domainsApi.getCloudflareDns(domainId);
+            setDnsRecords(response.records || []);
+            setIsCloudflare(true);
+          } else {
+            // Fetch stored DNS records (manual mode)
+            const response = await domainsApi.getDnsRecords(domainId);
+            setDnsRecords(response.storedRecords || []);
+            setIsCloudflare(false);
+          }
+        } catch (error) {
+          console.error('Failed to load DNS records', error);
+          toast.error('Failed to load DNS records');
+        }
+      };
+      loadDnsRecords();
     }
-  }, [activeTab, domainId]);
+  }, [activeTab, domainId, domain]);
 
   // Load Addresses when tab is active
   useEffect(() => {
@@ -436,6 +453,11 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                               <AlertTriangle size={12} className="text-amber-400" /> Pending
                           </span>
                         )} 
+                        {domain.cloudflare?.mode === 'managed' && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              <span className="size-2 bg-orange-400 rounded-full" /> Cloudflare
+                          </span>
+                        )}
                         <span className="text-text-secondary text-sm">• {domain.verificationStatus}</span>
                       </div>
                   </div>

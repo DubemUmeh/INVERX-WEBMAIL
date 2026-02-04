@@ -5,21 +5,23 @@ export default function Hero() {
             <div className="mx-auto max-w-4xl flex flex-col items-center gap-6">
                 <div
                     className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300">
-                    <span className="flex size-2 rounded-full bg-green-500"></span>
-                    v2.0 is now live
+                    <span className="flex size-2 rounded-full bg-blue-500"></span>
+                    Early Access
                 </div>
                 <h1
                     className="text-5xl md:text-7xl font-black leading-[1.1] tracking-[-0.033em] text-primary dark:text-white">
                     Email at the speed<br />of thought.
                 </h1>
                 <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl leading-relaxed">
-                    INVERX is a modern webmail platform that empowers you to manage your messages efficiently, maintain strong encryption, and stay in full control without ads, tracking, or clutter.
+                    INVERX is a modern webmail platform that empowers you to manage your messages efficiently, and stay in full control without ads, tracking, or clutter.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full justify-center">
+                    <a href="/waitlists">
                     <button
                         className="h-12 px-8 rounded-lg bg-primary dark:bg-white text-white dark:text-primary text-base font-bold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                        Get Started for Free
+                        Join Waitlist
                     </button>
+                    </a>
                     <button
                         className="h-12 px-8 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-primary dark:text-white text-base font-bold hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors">
                         View Demo

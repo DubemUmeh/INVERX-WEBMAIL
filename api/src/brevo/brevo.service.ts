@@ -279,7 +279,7 @@ export class BrevoService {
         id: d.id,
         name: d.name,
         status: d.status,
-        verificationStatus: d.verificationStatus,
+        verificationStatus: d.status,
       }));
   }
 

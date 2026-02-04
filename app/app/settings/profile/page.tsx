@@ -56,7 +56,7 @@ export default function ProfilePage() {
       await signOut({
         fetchOptions: {
           onSuccess: () => {
-            window.location.href = "http://localhost:1000/login";
+            window.location.href = `${process.env.AUTH_APP_ORIGIN}login/`;
           },
         },
       });

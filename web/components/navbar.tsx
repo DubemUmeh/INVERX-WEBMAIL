@@ -37,7 +37,7 @@ export default function Navbar() {
       className={`fixed inset-x-0 z-50 transition-all duration-500 box-border bg-white/80 backdrop-blur-md ${
         isScrolled || isOpen
           ? "top-4 mx-4 md:mx-10 lg:mx-16 rounded-2xl border border-gray-200 shadow-sm py-3"
-          : "top-0 py-4 md:py-6 border-b"
+          : "top-0 py-3 border-b"
       }`}
     >
       <div className="flex flex-col px-4 max-w-7xl mx-auto">
@@ -68,7 +68,7 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href='/waitlists' className="hidden md:flex h-9 md:h-10 items-center px-5 rounded-xl border border-gray-200 text-sm font-semibold text-primary bg-blue-100/30 hover:bg-gray-50 transition-colors cursor-pointer shadow-xs">
+            <Link href='/waitlists' className="hidden md:flex py-2 md:py-3 items-center px-5 rounded-xl border border-gray-200 text-sm font-semibold text-primary bg-blue-200/70 hover:bg-blue-200/50 transition-colors cursor-pointer shadow-xs">
               Get Started
             </Link>
 
@@ -104,7 +104,7 @@ export default function Navbar() {
                   </Link>
                 ))}
                 <div className="pt-2">
-                  <Link href='/waitlists' className="w-full flex h-11 items-center justify-center px-5 rounded-xl border border-gray-200 text-base font-semibold text-primary bg-white hover:bg-gray-50 transition-colors cursor-pointer shadow-sm">
+                  <Link href='/waitlists' className="w-full flex h-12 items-center justify-center px-5 rounded-xl border border-gray-200 text-base font-semibold text-primary bg-blue-200/70 hover:bg-blue-200/50 transition-colors cursor-pointer shadow-sm">
                     Get Started
                   </Link>
                 </div>

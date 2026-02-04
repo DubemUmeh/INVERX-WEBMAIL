@@ -92,6 +92,14 @@ export class DomainsController {
     return this.domainsService.checkDns(accountId, domainId);
   }
 
+  @Get(':id/cloudflare/dns')
+  getCloudflareDnsRecords(
+    @CurrentUser('accountId') accountId: string,
+    @Param('id') domainId: string,
+  ) {
+    return this.domainsService.getCloudflareDnsRecords(accountId, domainId);
+  }
+
   // Address sub-routes
   @Get(':id/addresses')
   getAddresses(

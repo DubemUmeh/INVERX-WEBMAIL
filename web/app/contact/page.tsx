@@ -2,7 +2,7 @@ import { MessageCircle, BookOpenCheck, Users, ChevronDown, Send } from "lucide-r
 
 export default function Contact() {
   return (
-    <main className="grow w-full px-5 md:px-10 py-12 md:py-20 flex justify-center">
+    <main className="grow w-full px-5 md:px-10 py-12 md:py-20 flex justify-center bg-background/50">
       <div className="w-full max-w-[1024px] flex flex-col">
         {/* <!-- Hero Section --> */}
         <div className="mb-12 md:mb-16">

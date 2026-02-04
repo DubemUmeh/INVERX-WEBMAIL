@@ -3,7 +3,7 @@ import { CheckCircle } from "lucide-react";
 
 export default function PricingCallout() {
   return (
-    <section className="layout-container flex h-full grow flex-col bg-neutral-100 dark:bg-neutral-900/50">
+    <section className="layout-container flex h-full grow flex-col bg-foreground/10 dark:bg-neutral-900/50">
       <div className="px-4 md:px-10 lg:px-40 flex flex-1 justify-center py-20">
         <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
           <div className="bg-primary dark:bg-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">

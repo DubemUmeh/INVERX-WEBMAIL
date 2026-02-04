@@ -15,8 +15,7 @@ export default function Page() {
         router.push("/dashboard");
       } else {
         // Redirection to login is handled by middleware for protected routes,
-        // but for the root page we can explicitly redirect to web login.
-        window.location.href = "http://localhost:1000/login";
+        window.location.href = `${process.env.AUTH_APP_ORIGIN}login/`;
       }
     }
   }, [session, isPending, router]);

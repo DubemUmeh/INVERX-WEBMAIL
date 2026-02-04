@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -22,7 +22,7 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<T> {
     const { params, ...init } = options;
 
@@ -102,7 +102,7 @@ class ApiClient {
   get<T>(
     endpoint: string,
     params?: RequestOptions["params"],
-    options?: Omit<RequestOptions, "params">
+    options?: Omit<RequestOptions, "params">,
   ) {
     return this.request<T>(endpoint, { ...options, method: "GET", params });
   }
@@ -110,7 +110,7 @@ class ApiClient {
   post<T>(
     endpoint: string,
     body?: any,
-    options?: Omit<RequestOptions, "body">
+    options?: Omit<RequestOptions, "body">,
   ) {
     return this.request<T>(endpoint, {
       ...options,
@@ -130,7 +130,7 @@ class ApiClient {
   patch<T>(
     endpoint: string,
     body?: any,
-    options?: Omit<RequestOptions, "body">
+    options?: Omit<RequestOptions, "body">,
   ) {
     return this.request<T>(endpoint, {
       ...options,
@@ -142,7 +142,7 @@ class ApiClient {
   delete<T>(
     endpoint: string,
     params?: RequestOptions["params"],
-    options?: Omit<RequestOptions, "params">
+    options?: Omit<RequestOptions, "params">,
   ) {
     return this.request<T>(endpoint, { ...options, method: "DELETE", params });
   }

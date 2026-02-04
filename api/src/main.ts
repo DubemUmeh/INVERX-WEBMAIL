@@ -7,12 +7,11 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn', 'debug', 'verbose'],
   });
 
+  const { APP_URL, WEB_URL } = process.env;
+
   // Enable CORS
   app.enableCors({
-    // origin: process.env.CORS_ORIGIN
-    //   ? process.env.CORS_ORIGIN.split(',')
-    //   : ['http://localhost:2000', 'http://localhost:1000'],
-    origin: ['http://localhost:1000', 'http://localhost:2000'],
+    origin: [WEB_URL, APP_URL],
     credentials: true,
   });
 

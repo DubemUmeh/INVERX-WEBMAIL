@@ -4,7 +4,7 @@ export async function proxy(request: NextRequest) {
   const sessionToken = request.cookies.get("better-auth.session_token")?.value;
 
   if (!sessionToken) {
-    const authOrigin = process.env.AUTH_APP_ORIGIN || "http://localhost:1000";
+    const authOrigin = process.env.AUTH_APP_ORIGIN;
     const loginUrl = new URL("/login", authOrigin);
     loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
@@ -20,7 +20,7 @@ export const config = {
     "/configuration/:path*",
     "/dashboard/:path*",
     "/domains/:path*",
-    "/mail/:path*",
+    "/mails/:path*",
     "/settings/:path*",
     "/status/:path*",
   ],

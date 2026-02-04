@@ -8,7 +8,7 @@ import SecurityStats from "@/components/security/stats";
 
 export default function Page() {
   return (
-    <main className="flex flex-col items-center w-full">
+    <main className="flex flex-col items-center w-full bg-background">
       <SecurityHero />
       <SecurityStats />
       <SecurityFeature />

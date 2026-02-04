@@ -22,7 +22,12 @@ export class SanitizationPipe implements PipeTransform {
       const sanitizedObj: any = {};
       for (const key in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          sanitizedObj[key] = this.sanitizeObject(obj[key]);
+          // Skip HTML escaping for bodyHtml field
+          if (key === 'bodyHtml' && typeof obj[key] === 'string') {
+            sanitizedObj[key] = this.sanitizeString(obj[key], true);
+          } else {
+            sanitizedObj[key] = this.sanitizeObject(obj[key]);
+          }
         }
       }
       return sanitizedObj;
@@ -35,11 +40,16 @@ export class SanitizationPipe implements PipeTransform {
     return obj;
   }
 
-  private sanitizeString(str: string): string {
-    return str
-      .trim()
-      .replace(/</g, '&lt;') // Escape HTML tags
-      .replace(/>/g, '&gt;')
+  private sanitizeString(str: string, skipHtmlEscaping = false): string {
+    let sanitized = str.trim();
+
+    if (!skipHtmlEscaping) {
+      sanitized = sanitized
+        .replace(/</g, '&lt;') // Escape HTML tags
+        .replace(/>/g, '&gt;');
+    }
+
+    return sanitized
       .replace(/javascript:/gi, '') // Remove potential JS execution
       .replace(/on\w+=/gi, ''); // Remove onEvent handlers
   }

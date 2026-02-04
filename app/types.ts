@@ -71,6 +71,14 @@ export interface Domain {
   dmarcVerified: boolean;
   lastCheckedAt?: string;
   createdAt: string;
+  // Provider integrations (from new tables)
+  cloudflare?: {
+    zoneId: string;
+    nameservers: string[];
+    mode: "managed" | "external";
+    status: string;
+    lastSyncedAt?: string;
+  };
 }
 
 export interface DnsRecord {

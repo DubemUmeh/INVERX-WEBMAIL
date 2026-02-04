@@ -110,6 +110,10 @@ export class DomainsService {
           console.error(
             `[DomainsService] Cloudflare zone creation failed: ${error.message}`,
           );
+
+          // Cleanup: Delete the domain from DB so the user can try again
+          await this.domainsRepository.delete(domain.id);
+
           throw new BadRequestException(
             `Failed to create Cloudflare zone: ${error.message}`,
           );
@@ -176,7 +180,45 @@ export class DomainsService {
   async verifyDomain(accountId: string, idOrName: string) {
     const domain = await this.getDomain(accountId, idOrName);
 
+    // 1. Check Cloudflare status if managed
+    let cloudflareStatus = 'pending';
+    const cfIntegration = await this.domainsRepository.getCloudflareByDomainId(
+      domain.id,
+    );
+
+    if (
+      cfIntegration &&
+      cfIntegration.mode === 'managed' &&
+      this.cloudflareService.isAvailable()
+    ) {
+      try {
+        const zone = await this.cloudflareService.getZone(cfIntegration.zoneId);
+        cloudflareStatus = zone.status;
+
+        // Update Cloudflare integration status
+        if (zone.status !== cfIntegration.status) {
+          await this.domainsRepository.updateCloudflareStatus(domain.id, {
+            status: zone.status,
+            lastSyncedAt: new Date(),
+          });
+        }
+
+        // If active in Cloudflare, ensure domain is active in our DB
+        if (zone.status === 'active' && domain.status !== 'active') {
+          await this.domainsRepository.update(domain.id, {
+            status: 'active',
+            lastCheckedAt: new Date(),
+          });
+        }
+      } catch (error) {
+        console.error('Failed to check Cloudflare status:', error);
+      }
+    }
+
+    // 2. Sync with SES (verification for sending)
     const syncResult = await this.sesSyncService.syncDomainStatus(domain.id);
+
+    // 3. Get Nameservers for display
     const nameservers = await this.domainVerificationService.getNameservers(
       domain.name,
     );
@@ -189,12 +231,15 @@ export class DomainsService {
       domainId: domain.id,
       domain: domain.name,
       verified: syncResult?.verified || false,
-      status: syncResult?.status,
+      status: syncResult?.status, // SES verification status
+      cloudflareStatus, // Return Cloudflare status
       nameservers,
       isCloudflare,
       message: syncResult?.verified
         ? 'Domain verified successfully! You can now create email addresses.'
-        : 'Domain verification pending. Please check your DNS records.',
+        : cloudflareStatus === 'active'
+          ? 'Cloudflare DNS is active. Finalizing email verification with AWS...'
+          : 'Domain verification pending. Please check your DNS records.',
     };
   }
 
@@ -287,6 +332,39 @@ export class DomainsService {
           ? 'Domain verified successfully!'
           : 'DNS records found! Waiting for AWS to confirm verification.'
         : 'Some DNS records are missing or incorrect.',
+    };
+  }
+
+  /**
+   * Get live DNS records from Cloudflare for a managed domain
+   */
+  async getCloudflareDnsRecords(accountId: string, idOrName: string) {
+    const domain = await this.getDomain(accountId, idOrName);
+    const cfIntegration = await this.domainsRepository.getCloudflareByDomainId(
+      domain.id,
+    );
+
+    if (!cfIntegration) {
+      throw new NotFoundException(
+        'Domain is not Cloudflare-managed. Use standard DNS records endpoint.',
+      );
+    }
+
+    if (!this.cloudflareService.isAvailable()) {
+      throw new BadRequestException('Cloudflare integration is not configured');
+    }
+
+    // Fetch live DNS records from Cloudflare
+    const records = await this.cloudflareService.listDnsRecords(
+      cfIntegration.zoneId,
+    );
+
+    return {
+      domain: domain.name,
+      zoneId: cfIntegration.zoneId,
+      mode: cfIntegration.mode,
+      lastSyncedAt: cfIntegration.lastSyncedAt,
+      records,
     };
   }
 

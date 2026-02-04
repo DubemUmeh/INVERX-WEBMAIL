@@ -98,7 +98,7 @@ export default function Page() {
       await signOut({
         fetchOptions: {
           onSuccess: () => {
-            window.location.href = "http://localhost:1000/login";
+            window.location.href = `${process.env.AUTH_APP_ORIGIN}login/`;
           },
         },
       });
@@ -383,7 +383,7 @@ export default function Page() {
               Quick Actions
             </h2>
             <div className="flex flex-col gap-3">
-              <Link href="/mail/compose" className="group flex items-center justify-between w-full p-4 rounded-lg bg-primary/20 hover:bg-primary/50 text-white shadow-lg transition-all transform active:scale-[0.99]">
+              <Link href="/mails/compose" className="group flex items-center justify-between w-full p-4 rounded-lg bg-primary/20 hover:bg-primary/50 text-white shadow-lg transition-all transform active:scale-[0.99]">
                 <div className="flex items-center gap-3">
                   <Edit size={24} />
                   <span className="font-bold">Send New Message</span>

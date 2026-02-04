@@ -17,7 +17,7 @@ export default function CloudflareDomainAdd() {
   const router = useRouter();
   const [step, setStep] = useState<'input' | 'verification'>('input');
   const [domainInput, setDomainInput] = useState('');
-  const [dnsMode, setDnsMode] = useState<'manual' | 'cloudflare-managed'>('manual');
+  const [dnsMode, setDnsMode] = useState<'manual' | 'cloudflare-managed'>('cloudflare-managed');
   const [createdDomain, setCreatedDomain] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -186,7 +186,7 @@ export default function CloudflareDomainAdd() {
                             </div>
                             <span className="font-semibold text-white">Cloudflare Managed</span>
                             {dnsMode === 'cloudflare-managed' && (
-                                <span className="ml-auto text-[10px] bg-primary text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                <span className="ml-auto text-[10px] bg-primary text-muted px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                                     FASTEST
                                 </span>
                             )}

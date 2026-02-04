@@ -9,6 +9,8 @@ export const domainsApi = {
   verify: (id: string) => api.post<any>(`/domains/${id}/verify`),
   getDnsRecords: (id: string) => api.get<any>(`/domains/${id}/dns`),
   checkDns: (id: string) => api.post<any>(`/domains/${id}/dns/check`),
+  getCloudflareDns: (id: string) =>
+    api.get<any>(`/domains/${id}/cloudflare/dns`),
 
   // Addresses
   getAddresses: (id: string) => api.get<any>(`/domains/${id}/addresses`),

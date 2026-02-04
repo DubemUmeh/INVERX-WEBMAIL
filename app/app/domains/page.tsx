@@ -72,6 +72,7 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
   }
 
   const domainName = domains[0].name;
+  console.log('name of domain', domainName)
   const domainId = domains[0].id;
 
   return (
@@ -152,7 +153,7 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
                       )}
                       {domain.status === 'failed' && (
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-400">
-                           <AlertTriangle size={12} className="text-red-400" /> Configuration Error
+                          <AlertTriangle size={12} className="text-red-400" /> Configuration Error
                         </span>
                       )}
                       {/* TODO: Add real verification date */}

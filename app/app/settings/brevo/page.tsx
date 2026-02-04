@@ -144,7 +144,8 @@ export default function BrevoSettingsPage() {
 
   async function handleAddDomain() {
     // Determine domain name from selection or input
-    const targetDomainName = selectedExistingDomain 
+    const isExistingDomain = selectedExistingDomain && selectedExistingDomain !== "new_domain";
+    const targetDomainName = isExistingDomain
       ? availableDomains.find(d => d.id === selectedExistingDomain)?.name || ""
       : domainName.trim();
 
@@ -156,8 +157,8 @@ export default function BrevoSettingsPage() {
     try {
       const domain = await brevoApi.addDomain({ 
         domainName: targetDomainName, 
-        dnsMode: selectedExistingDomain ? "cloudflare-managed" : dnsMode,
-        existingDomainId: selectedExistingDomain || undefined
+        dnsMode: isExistingDomain ? "cloudflare-managed" : dnsMode,
+        existingDomainId: isExistingDomain ? selectedExistingDomain : undefined
       });
       toast.success(`Domain ${targetDomainName} added!`);
       setAddDomainDialogOpen(false);
@@ -570,14 +571,14 @@ export default function BrevoSettingsPage() {
                         value={selectedExistingDomain} 
                         onValueChange={(v) => {
                           setSelectedExistingDomain(v);
-                          if (v) setDomainName(""); // Clear manual input if selecting existing
+                          if (v && v !== "new_domain") setDomainName(""); // Clear manual input if selecting existing
                         }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={loadingAvailableDomains ? "Loading..." : "Select an existing domain (optional)"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Enter new domain manually</SelectItem>
+                          <SelectItem value="new_domain">Enter new domain manually</SelectItem>
                           {availableDomains.map(d => (
                             <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                           ))}
@@ -590,7 +591,7 @@ export default function BrevoSettingsPage() {
                   )}
                   
                   {/* Manual Domain Input - only show if no existing domain selected */}
-                  {!selectedExistingDomain && (
+                  {(!selectedExistingDomain || selectedExistingDomain === "new_domain") && (
                     <>
                       <div className="space-y-2">
                         <Label htmlFor="domainName">Domain Name</Label>
@@ -622,7 +623,7 @@ export default function BrevoSettingsPage() {
                   )}
                   
                   {/* Info for existing domain */}
-                  {selectedExistingDomain && (
+                  {selectedExistingDomain && selectedExistingDomain !== "new_domain" && (
                     <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
                       DNS records will be automatically added to your Cloudflare zone
                     </div>

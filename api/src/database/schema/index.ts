@@ -11,6 +11,7 @@ import {
   pgEnum,
   unique,
   foreignKey,
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -90,6 +91,12 @@ export const brevoDnsModeEnum = pgEnum('brevo_dns_mode', [
 export const brevoSendingTierEnum = pgEnum('brevo_sending_tier', [
   'restricted',
   'standard',
+]);
+
+// Cloudflare DNS Management Mode
+export const cloudflareDnsModeEnum = pgEnum('cloudflare_dns_mode', [
+  'managed', // INVERX fully manages DNS via Cloudflare API
+  'external', // User manages DNS, zone added for monitoring
 ]);
 
 // SMTP Configurations - Multiple per user with encrypted credentials
@@ -406,6 +413,45 @@ export const domainAddresses = pgTable(
   (t) => [unique().on(t.domainId, t.localPart)],
 );
 
+// Domain Cloudflare Integration
+export const domainCloudflare = pgTable('domain_cloudflare', {
+  id: uuid('id')
+    .primaryKey()
+    .$defaultFn(() => generateUuidv7()),
+  domainId: uuid('domain_id')
+    .notNull()
+    .references(() => domains.id, { onDelete: 'cascade' })
+    .unique(),
+  zoneId: varchar('zone_id', { length: 255 }).notNull(),
+  nameservers: text('nameservers').array(),
+  mode: cloudflareDnsModeEnum('mode').default('managed'),
+  status: varchar('status', { length: 50 }).default('pending'), // 'pending' | 'active' | 'moved'
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+// Domain SES Integration
+export const domainSes = pgTable('domain_ses', {
+  id: uuid('id')
+    .primaryKey()
+    .$defaultFn(() => generateUuidv7()),
+  domainId: uuid('domain_id')
+    .notNull()
+    .references(() => domains.id, { onDelete: 'cascade' })
+    .unique(),
+  sesIdentityArn: varchar('ses_identity_arn', { length: 255 }),
+  verificationStatus: domainVerificationStatusEnum(
+    'verification_status',
+  ).default('unverified'),
+  dkimVerified: boolean('dkim_verified').default(false),
+  spfVerified: boolean('spf_verified').default(false),
+  dmarcVerified: boolean('dmarc_verified').default(false),
+  lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
 // Contacts
 export const contacts = pgTable('contacts', {
   id: uuid('id')
@@ -523,7 +569,13 @@ export const userMessages = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
-  (t) => [unique().on(t.userId, t.messageId)],
+  (t) => [
+    unique().on(t.userId, t.messageId),
+    index('idx_user_messages_deleted').on(t.userId, t.isDeleted),
+    index('idx_user_messages_archived').on(t.userId, t.isArchived),
+    index('idx_user_messages_starred').on(t.userId, t.isStarred),
+    index('idx_user_messages_read').on(t.userId, t.isRead),
+  ],
 );
 
 // API Keys
@@ -647,6 +699,8 @@ export const domainsRelations = relations(domains, ({ one, many }) => ({
   }),
   dnsRecords: many(dnsRecords),
   addresses: many(domainAddresses),
+  cloudflare: one(domainCloudflare),
+  ses: one(domainSes),
 }));
 
 export const dnsRecordsRelations = relations(dnsRecords, ({ one }) => ({
@@ -665,6 +719,23 @@ export const domainAddressesRelations = relations(
     }),
   }),
 );
+
+export const domainCloudflareRelations = relations(
+  domainCloudflare,
+  ({ one }) => ({
+    domain: one(domains, {
+      fields: [domainCloudflare.domainId],
+      references: [domains.id],
+    }),
+  }),
+);
+
+export const domainSesRelations = relations(domainSes, ({ one }) => ({
+  domain: one(domains, {
+    fields: [domainSes.domainId],
+    references: [domains.id],
+  }),
+}));
 
 export const contactsRelations = relations(contacts, ({ one }) => ({
   user: one(users, {

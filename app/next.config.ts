@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Allow-Credentials", value: "true" },
           {
             key: "Access-Control-Allow-Origin",
-            value: "http://localhost:1000",
+            value: `${process.env.AUTH_APP_ORIGIN}`,
           },
           {
             key: "Access-Control-Allow-Methods",

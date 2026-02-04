@@ -1,8 +1,8 @@
-import { Zap, Layers, WifiOff, Keyboard, ShieldCheck, EyeOff } from "lucide-react"
+import { Zap, Globe, Server, Keyboard, ShieldCheck, EyeOff } from "lucide-react"
 
 export default function FeatureGrid() {
   return (
-    <section className="py-20 bg-white dark:bg-[#141414]">
+    <section className="py-20 bg-foreground/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mb-16">
             <h2 className="text-3xl md:text-4xl font-black tracking-tight text-primary dark:text-white mb-6">
@@ -29,24 +29,24 @@ export default function FeatureGrid() {
           <div className="group p-6 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-primary/50 dark:hover:border-white/50 transition-colors">
             <div className="size-12 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-primary dark:text-white">
-                  <Layers />
+                  <Globe />
                 </span>
             </div>
-            <h3 className="text-lg font-bold mb-2">Smart Categorization</h3>
-            <p className="text-neutral-600 dark:text-neutral-400">AI-powered sorting automatically bundles
-              newsletters and notifications.
+            <h3 className="text-lg font-bold mb-2">Custom Domains</h3>
+            <p className="text-neutral-600 dark:text-neutral-400">Bring your own domain. Full support for
+              DKIM, SPF, and DMARC verification.
             </p>
           </div>
           {/* <!-- Feature 3 --> */}
           <div className="group p-6 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-primary/50 dark:hover:border-white/50 transition-colors">
             <div className="size-12 rounded-lg bg-white dark:bg-neutral-800 flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-primary dark:text-white">
-                  <WifiOff />
+                  <Server />
                 </span>
             </div>
-            <h3 className="text-lg font-bold mb-2">Offline First</h3>
-            <p className="text-neutral-600 dark:text-neutral-400">Read, archive, and write without signal. We
-              sync seamlessly when you're back online.
+            <h3 className="text-lg font-bold mb-2">SMTP Support</h3>
+            <p className="text-neutral-600 dark:text-neutral-400">Connect any email provider. Send and receive
+              emails using your existing SMTP credentials.
             </p>
           </div>
           {/* <!-- Feature 4 --> */}
@@ -70,7 +70,7 @@ export default function FeatureGrid() {
             </div>
             <h3 className="text-lg font-bold mb-2">Privacy Focused</h3>
             <p className="text-neutral-600 dark:text-neutral-400">
-              End-to-end encryption by default. No ads, no data mining, just your email.
+              Secure by default. No ads, no data mining, just your email.
             </p>
           </div>
           {/* <!-- Feature 6 --> */}

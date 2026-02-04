@@ -4,6 +4,8 @@ import { db } from '../database/drizzle.js';
 import * as schema from '../database/schema/index.js';
 import { v7 as uuidv7 } from 'uuid';
 
+const { APP_URL, WEB_URL } = process.env;
+
 export const auth = betterAuth({
   advanced: {
     database: {
@@ -69,5 +71,5 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins: ['http://localhost:1000', 'http://localhost:2000'],
+  trustedOrigins: [`${WEB_URL}`, `${APP_URL}`],
 });

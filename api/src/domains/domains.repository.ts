@@ -6,6 +6,7 @@ import {
   domains,
   dnsRecords,
   domainAddresses,
+  domainCloudflare,
 } from '../database/schema/index.js';
 
 @Injectable()
@@ -93,21 +94,48 @@ export class DomainsRepository {
   }
 
   /**
-   * Find Cloudflare-managed domains for an account (domains with cloudflareZoneId)
+   * Find Cloudflare-managed domains for an account
    */
   async findCloudflareManaged(accountId: string) {
-    // For now, return all active/pending domains as potential candidates
-    // In the future, you could add a cloudflareZoneId column to filter
     return this.db
       .select({
         id: domains.id,
         name: domains.name,
         status: domains.status,
-        verificationStatus: domains.verificationStatus,
+        zoneId: domainCloudflare.zoneId,
+        mode: domainCloudflare.mode,
+        lastSyncedAt: domainCloudflare.lastSyncedAt,
       })
       .from(domains)
+      .innerJoin(domainCloudflare, eq(domains.id, domainCloudflare.domainId))
       .where(eq(domains.accountId, accountId))
       .orderBy(desc(domains.createdAt));
+  }
+
+  /**
+   * Get Cloudflare integration data for a domain
+   */
+  async getCloudflareByDomainId(domainId: string) {
+    const result = await this.db
+      .select()
+      .from(domainCloudflare)
+      .where(eq(domainCloudflare.domainId, domainId))
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  async updateCloudflareStatus(
+    domainId: string,
+    data: Partial<{
+      status: string;
+      lastSyncedAt: Date;
+    }>,
+  ) {
+    await this.db
+      .update(domainCloudflare)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(domainCloudflare.domainId, domainId));
   }
 
   // DNS Records

@@ -61,6 +61,8 @@ export class MailRepository {
     const { page = 1, limit = 20 } = options;
     const offset = (page - 1) * limit;
 
+    const emailsSql = sql`ARRAY[${sql.join(userEmails, sql`, `)}]::text[]`;
+
     return this.db
       .select({
         userMessage: userMessages,
@@ -73,6 +75,12 @@ export class MailRepository {
           eq(userMessages.userId, userId),
           eq(userMessages.isDeleted, false),
           inArray(messages.fromEmail, userEmails),
+          // Exclude messages where the user is also a recipient (Inbox messages)
+          sql`NOT (
+            ${messages.toRecipients} && ${emailsSql} OR
+            ${messages.ccRecipients} && ${emailsSql} OR
+            ${messages.bccRecipients} && ${emailsSql}
+          )`,
         ),
       )
       .orderBy(desc(messages.sentAt))
