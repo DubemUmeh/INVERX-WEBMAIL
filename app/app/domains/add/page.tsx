@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import CloudflareDomainAdd from '@/components/domains/CloudflareDomainAdd';
 import { AWSDomainAdd } from '@/components/domains/AWSDomainAdd';
 import { Button } from '@/components/ui/button';

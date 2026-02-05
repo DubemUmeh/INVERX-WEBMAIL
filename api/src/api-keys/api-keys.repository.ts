@@ -58,4 +58,20 @@ export class ApiKeysRepository {
       .set({ lastUsedAt: new Date() })
       .where(eq(apiKeys.id, keyId));
   }
+
+  async findByKeyHash(keyHash: string) {
+    console.log(`[ApiKeysRepository.findByKeyHash] Searching for key hash: ${keyHash}`);
+    const result = await this.db
+      .select()
+      .from(apiKeys)
+      .where(eq(apiKeys.keyHash, keyHash))
+      .limit(1);
+
+    console.log(`[ApiKeysRepository.findByKeyHash] Query result:`, result.length > 0 ? `Found 1 key` : 'No keys found');
+    if (result.length > 0) {
+      console.log(`[ApiKeysRepository.findByKeyHash] Key details - ID: ${result[0].id}, Account: ${result[0].accountId}, Status: ${result[0].status}`);
+    }
+
+    return result[0] || null;
+  }
 }

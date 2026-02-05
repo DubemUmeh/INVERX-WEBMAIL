@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, getTableColumns } from 'drizzle-orm';
 import { DRIZZLE } from '../database/database.module.js';
 import type { Database } from '../database/drizzle.js';
 import {
@@ -7,6 +7,7 @@ import {
   dnsRecords,
   domainAddresses,
   domainCloudflare,
+  domainSes,
 } from '../database/schema/index.js';
 
 @Injectable()
@@ -31,24 +32,77 @@ export class DomainsRepository {
 
   async findById(accountId: string, domainId: string) {
     const result = await this.db
-      .select()
+      .select({
+        ...getTableColumns(domains),
+        cloudflare: {
+          zoneId: domainCloudflare.zoneId,
+          mode: domainCloudflare.mode,
+          status: domainCloudflare.status,
+          lastSyncedAt: domainCloudflare.lastSyncedAt,
+          nameservers: domainCloudflare.nameservers,
+        },
+        ses: {
+          verificationStatus: domainSes.verificationStatus,
+          dkimVerified: domainSes.dkimVerified,
+          spfVerified: domainSes.spfVerified,
+          dmarcVerified: domainSes.dmarcVerified,
+          lastCheckedAt: domainSes.lastCheckedAt,
+        },
+      })
       .from(domains)
+      .leftJoin(domainCloudflare, eq(domains.id, domainCloudflare.domainId))
+      .leftJoin(domainSes, eq(domains.id, domainSes.domainId))
       .where(and(eq(domains.id, domainId), eq(domains.accountId, accountId)))
       .limit(1);
 
-    return result[0] || null;
+    if (result.length === 0) return null;
+
+    const row = result[0];
+    return {
+      ...row,
+      cloudflare: row.cloudflare?.zoneId ? row.cloudflare : undefined,
+      ses: row.ses?.verificationStatus ? row.ses : undefined,
+      // Map SES fields to root object level if needed for backward compatibility during refactor,
+      // OR preferably frontend should use .ses.*.
+      // For now, let's keep the return object clean and assume frontend updates.
+    };
   }
 
   async findByName(accountId: string, domainName: string) {
     const result = await this.db
-      .select()
+      .select({
+        ...getTableColumns(domains),
+        cloudflare: {
+          zoneId: domainCloudflare.zoneId,
+          mode: domainCloudflare.mode,
+          status: domainCloudflare.status,
+          lastSyncedAt: domainCloudflare.lastSyncedAt,
+          nameservers: domainCloudflare.nameservers,
+        },
+        ses: {
+          verificationStatus: domainSes.verificationStatus,
+          dkimVerified: domainSes.dkimVerified,
+          spfVerified: domainSes.spfVerified,
+          dmarcVerified: domainSes.dmarcVerified,
+          lastCheckedAt: domainSes.lastCheckedAt,
+        },
+      })
       .from(domains)
+      .leftJoin(domainCloudflare, eq(domains.id, domainCloudflare.domainId))
+      .leftJoin(domainSes, eq(domains.id, domainSes.domainId))
       .where(
         and(eq(domains.name, domainName), eq(domains.accountId, accountId)),
       )
       .limit(1);
 
-    return result[0] || null;
+    if (result.length === 0) return null;
+
+    const row = result[0];
+    return {
+      ...row,
+      cloudflare: row.cloudflare?.zoneId ? row.cloudflare : undefined,
+      ses: row.ses?.verificationStatus ? row.ses : undefined,
+    };
   }
   async create(data: { accountId: string; name: string }) {
     const result = await this.db.insert(domains).values(data).returning();
@@ -60,11 +114,6 @@ export class DomainsRepository {
     domainId: string,
     data: Partial<{
       status: 'active' | 'pending' | 'failed' | 'expired';
-      verificationStatus: 'verified' | 'unverified' | 'pending';
-      dkimVerified: boolean;
-      spfVerified: boolean;
-      dmarcVerified: boolean;
-      lastCheckedAt: Date;
     }>,
   ) {
     const result = await this.db
@@ -85,12 +134,24 @@ export class DomainsRepository {
    */
   async findByIdWithoutAccount(domainId: string) {
     const result = await this.db
-      .select()
+      .select({
+        ...getTableColumns(domains),
+        ses: {
+          verificationStatus: domainSes.verificationStatus,
+        },
+      })
       .from(domains)
+      .leftJoin(domainSes, eq(domains.id, domainSes.domainId))
       .where(eq(domains.id, domainId))
       .limit(1);
 
-    return result[0] || null;
+    if (result.length === 0) return null;
+
+    const row = result[0];
+    return {
+      ...row,
+      ses: row.ses?.verificationStatus ? row.ses : undefined,
+    };
   }
 
   /**
@@ -125,6 +186,29 @@ export class DomainsRepository {
     return result[0] || null;
   }
 
+  async createCloudflareIntegration(data: {
+    domainId: string;
+    zoneId: string;
+    nameservers?: string[];
+    mode?: 'managed' | 'external';
+    status?: string;
+    lastSyncedAt?: Date;
+  }) {
+    const result = await this.db
+      .insert(domainCloudflare)
+      .values({
+        domainId: data.domainId,
+        zoneId: data.zoneId,
+        nameservers: data.nameservers || [],
+        mode: data.mode || 'managed',
+        status: data.status || 'pending',
+        lastSyncedAt: data.lastSyncedAt || new Date(),
+      })
+      .returning();
+
+    return result[0] || null;
+  }
+
   async updateCloudflareStatus(
     domainId: string,
     data: Partial<{
@@ -136,6 +220,52 @@ export class DomainsRepository {
       .update(domainCloudflare)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(domainCloudflare.domainId, domainId));
+  }
+
+  // SES Integration
+  async getSesByDomainId(domainId: string) {
+    const result = await this.db
+      .select()
+      .from(domainSes)
+      .where(eq(domainSes.domainId, domainId))
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  async createSesIntegration(data: {
+    domainId: string;
+    verificationStatus?: 'verified' | 'unverified' | 'pending';
+    sesIdentityArn?: string;
+  }) {
+    const result = await this.db
+      .insert(domainSes)
+      .values({
+        domainId: data.domainId,
+        verificationStatus: data.verificationStatus || 'unverified',
+        sesIdentityArn: data.sesIdentityArn,
+        lastCheckedAt: new Date(),
+      })
+      .onConflictDoNothing() // Idempotent
+      .returning();
+
+    return result[0] || null;
+  }
+
+  async updateSesStatus(
+    domainId: string,
+    data: Partial<{
+      verificationStatus: 'verified' | 'unverified' | 'pending';
+      dkimVerified: boolean;
+      spfVerified: boolean;
+      dmarcVerified: boolean;
+      lastCheckedAt: Date;
+    }>,
+  ) {
+    await this.db
+      .update(domainSes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(domainSes.domainId, domainId));
   }
 
   // DNS Records

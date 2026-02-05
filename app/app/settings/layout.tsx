@@ -14,7 +14,8 @@ import {
   Menu,
   ArrowLeft,
   Settings,
-  Send
+  Send,
+  Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -27,6 +28,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     { href: "/settings/profile", label: "Profile", icon: User },
     { href: "/settings", label: "General", icon: Settings },
     { href: "/settings/security", label: "Security", icon: Lock },
+    { href: "/settings/api-keys", label: "API Keys", icon: Key },
     { href: "/settings/domains", label: "Domains", icon: Monitor },
     { href: "/settings/aliases", label: "Aliases", icon: AtSign },
     { href: "/settings/rules", label: "Inbox Rules", icon: Inbox },

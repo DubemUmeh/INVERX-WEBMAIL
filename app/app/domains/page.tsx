@@ -72,8 +72,8 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
   }
 
   const domainName = domains[0].name;
-  console.log('name of domain', domainName)
   const domainId = domains[0].id;
+  console.log('name and Id of domain: ', { domainName, domainId });
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-white min-h-screen text-base">

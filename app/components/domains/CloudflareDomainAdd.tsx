@@ -84,6 +84,10 @@ export default function CloudflareDomainAdd() {
       if (data.verified) {
         toast.success('Domain verified successfully!');
         router.push(`/domains/${createdDomain.name}`);
+      } else if (data.delegation && data.delegation.delegated === false) {
+        const expected = (data.delegation.expected || []).join(', ');
+        const current = (data.delegation.current || []).join(', ') || 'none';
+        toast.warning(`Nameservers not delegated yet. Expected: ${expected}. Current: ${current}`);
       } else {
         toast.warning('Domain not verified yet. Please check your DNS records.');
       }
@@ -352,31 +356,31 @@ export default function CloudflareDomainAdd() {
 }
 
 function DnsRecordCard({ type, host, value, purpose }: any) {
-    return (
-        <div className="space-y-2 p-4 bg-background-dark rounded-xl border border-surface-border">
-            <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <span className="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase">{type}</span>
-                    <span className="text-white text-xs font-mono">{host}</span>
-                </div>
-                <span className="text-[10px] text-text-secondary uppercase font-semibold">{purpose}</span>
-            </div>
-            <div className="relative group">
-                <div className="font-mono text-[11px] text-white bg-black/40 p-3 rounded-lg border border-surface-border/50 break-all pr-10">
-                    {value}
-                </div>
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="absolute right-1 top-1 h-8 w-8 p-0 text-text-secondary hover:text-white"
-                    onClick={() => {
-                        navigator.clipboard.writeText(value);
-                        toast.success('Copied to clipboard');
-                    }}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                </Button>
-            </div>
-        </div>
-    );
+return (
+  <div className="space-y-2 p-4 bg-background-dark rounded-xl border border-surface-border">
+    <div className="flex justify-between items-center">
+      <div className="flex items-center gap-2">
+        <span className="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase">{type}</span>
+        <span className="text-white text-xs font-mono">{host}</span>
+      </div>
+      <span className="text-[10px] text-text-secondary uppercase font-semibold">{purpose}</span>
+    </div>
+    <div className="relative group">
+      <div className="font-mono text-[11px] text-white bg-black/40 p-3 rounded-lg border border-surface-border/50 break-all pr-10">
+          {value}
+      </div>
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="absolute right-1 top-1 h-8 w-8 p-0 text-text-secondary hover:text-white"
+        onClick={() => {
+            navigator.clipboard.writeText(value);
+            toast.success('Copied to clipboard');
+        }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      </Button>
+    </div>
+  </div>
+);
 }

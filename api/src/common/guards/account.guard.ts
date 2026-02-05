@@ -34,6 +34,20 @@ export class AccountGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
+    // If authenticated via API Key, we trust the AuthGuard which already validated the key and account
+    if (userId === 'api-key') {
+      console.log(
+        '[AccountGuard] Authenticated via API key, bypassing membership check',
+      );
+      // Mock the account member so RoleGuard passes
+      (request as any).accountMember = {
+        accountId,
+        role: 'owner', // API keys are treated as owners
+        accountName: 'API Key Access',
+      };
+      return true;
+    }
+
     if (!accountId) {
       console.log(
         '[AccountGuard] No account context found, allowing request to proceed',

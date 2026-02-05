@@ -89,12 +89,31 @@ export class DomainsService {
               `[DomainsService] Cloudflare zone created for ${domainName}, nameservers: ${zone.name_servers?.join(', ')}`,
             );
 
-            // Return Cloudflare zone info with nameservers for user to configure at registrar
+            // Persist Cloudflare integration details so later verification can check delegation
+            try {
+              await this.domainsRepository.createCloudflareIntegration({
+                domainId: domain.id,
+                zoneId: zone.id,
+                nameservers: zone.name_servers || [],
+                mode: 'managed',
+                status: zone.status,
+                lastSyncedAt: new Date(),
+              });
+            } catch (err) {
+              this.domainsRepository.delete(domain.id).catch(() => {});
+              console.error(
+                '[DomainsService] Failed to persist Cloudflare integration:',
+                err,
+              );
+              throw new BadRequestException(
+                `Failed to save Cloudflare integration: ${err?.message || err}`,
+              );
+            }
+
             return {
               id: domain.id,
               name: domain.name,
               status: 'pending',
-              verificationStatus: 'unverified',
               dnsMode: 'cloudflare-managed',
               cloudflare: {
                 zoneId: zone.id,
@@ -158,7 +177,6 @@ export class DomainsService {
         id: domain.id,
         name: domain.name,
         status: 'pending',
-        verificationStatus: 'unverified',
         dnsMode: 'manual',
         dnsRecords,
         createdAt: domain.createdAt,
@@ -180,10 +198,18 @@ export class DomainsService {
   async verifyDomain(accountId: string, idOrName: string) {
     const domain = await this.getDomain(accountId, idOrName);
 
+    console.log(
+      `[verifyDomain] Verifying domain: ${domain.name} (ID: ${domain.id})`,
+    );
+
     // 1. Check Cloudflare status if managed
     let cloudflareStatus = 'pending';
     const cfIntegration = await this.domainsRepository.getCloudflareByDomainId(
       domain.id,
+    );
+
+    console.log(
+      `[verifyDomain] Cloudflare integration found: ${!!cfIntegration}`,
     );
 
     if (
@@ -194,6 +220,8 @@ export class DomainsService {
       try {
         const zone = await this.cloudflareService.getZone(cfIntegration.zoneId);
         cloudflareStatus = zone.status;
+
+        console.log(`[verifyDomain] Cloudflare zone status: ${zone.status}`);
 
         // Update Cloudflare integration status
         if (zone.status !== cfIntegration.status) {
@@ -207,16 +235,85 @@ export class DomainsService {
         if (zone.status === 'active' && domain.status !== 'active') {
           await this.domainsRepository.update(domain.id, {
             status: 'active',
-            lastCheckedAt: new Date(),
           });
         }
+
+        // Perform delegation check: compare Cloudflare's expected nameservers with current authoritative NS
+        try {
+          const currentNs = await this.domainVerificationService.getNameservers(
+            domain.name,
+          );
+          const expectedNs = (zone.name_servers || []).map((n) =>
+            n.replace(/\.$/, '').toLowerCase(),
+          );
+          const actualNs = (currentNs || []).map((n) =>
+            n.replace(/\.$/, '').toLowerCase(),
+          );
+
+          const delegationMatch =
+            expectedNs.length > 0 &&
+            expectedNs.every((e) => actualNs.includes(e));
+
+          // Delegation Check
+          // TRUST CLOUDFLARE: If Cloudflare says 'active', then the nameservers are correct.
+          // The local `getNameservers` check is essentially a second opinion but can be flaky due to propagation/caching.
+          // So if Cloudflare is active, we consider the domain delegated.
+          if (zone.status === 'active') {
+            // Ensure our DB matches Cloudflare's reality
+            if (cfIntegration.status !== 'active') {
+              await this.domainsRepository.updateCloudflareStatus(domain.id, {
+                status: 'active',
+                lastSyncedAt: new Date(),
+              });
+            }
+
+            // Mark delegation as successful because Cloudflare is the authority here
+            (domain as any)._delegation = {
+              expected: expectedNs,
+              current: actualNs.length > 0 ? actualNs : expectedNs, // Fallback to expected if local lookup is empty/cached
+              delegated: true,
+            };
+          } else {
+            // Only if Cloudflare is NOT active do we rely on the manual check to hint why
+            if (!delegationMatch) {
+              // Update Cloudflare integration status to 'moved' to indicate not yet delegated
+              await this.domainsRepository.updateCloudflareStatus(domain.id, {
+                status: 'moved',
+                lastSyncedAt: new Date(),
+              });
+            }
+
+            (domain as any)._delegation = {
+              expected: expectedNs,
+              current: actualNs,
+              delegated: delegationMatch,
+            };
+          }
+
+          // Attach delegation info to domain object for downstream responses
+          (domain as any)._delegation = {
+            expected: expectedNs,
+            current: actualNs,
+            delegated: delegationMatch,
+          };
+        } catch (err) {
+          // swallow delegation errors but log
+          console.error('[verifyDomain] Delegation check failed:', err);
+        }
       } catch (error) {
-        console.error('Failed to check Cloudflare status:', error);
+        console.error(
+          '[verifyDomain] Failed to check Cloudflare status:',
+          error,
+        );
       }
     }
 
     // 2. Sync with SES (verification for sending)
     const syncResult = await this.sesSyncService.syncDomainStatus(domain.id);
+
+    console.log(
+      `[verifyDomain] SES sync result - verified: ${syncResult?.verified}, status: ${syncResult?.status}`,
+    );
 
     // 3. Get Nameservers for display
     const nameservers = await this.domainVerificationService.getNameservers(
@@ -227,13 +324,14 @@ export class DomainsService {
     );
 
     // Get current records to display status
-    return {
+    const response = {
       domainId: domain.id,
       domain: domain.name,
       verified: syncResult?.verified || false,
       status: syncResult?.status, // SES verification status
       cloudflareStatus, // Return Cloudflare status
       nameservers,
+      delegation: (domain as any)._delegation || null,
       isCloudflare,
       message: syncResult?.verified
         ? 'Domain verified successfully! You can now create email addresses.'
@@ -241,6 +339,10 @@ export class DomainsService {
           ? 'Cloudflare DNS is active. Finalizing email verification with AWS...'
           : 'Domain verification pending. Please check your DNS records.',
     };
+
+    console.log(`[verifyDomain] Response: ${JSON.stringify(response)}`);
+
+    return response;
   }
 
   async getDnsRecords(accountId: string, idOrName: string) {
@@ -282,14 +384,18 @@ export class DomainsService {
 
     // 3. Update local DB if verification passed
     if (dnsStatus.overallValid) {
-      // DNS is valid - mark domain as verified
-      await this.domainsRepository.update(domain.id, {
+      // DNS is valid - mark integration as verified
+      await this.domainsRepository.updateSesStatus(domain.id, {
         spfVerified: dnsStatus.spf.valid,
         dkimVerified: dnsStatus.dkim.valid,
         dmarcVerified: dnsStatus.dmarc.valid,
         verificationStatus: 'verified',
-        status: 'active',
         lastCheckedAt: new Date(),
+      });
+
+      // And mark domain as active
+      await this.domainsRepository.update(domain.id, {
+        status: 'active',
       });
 
       // Also update all DNS records to active
@@ -384,7 +490,7 @@ export class DomainsService {
   ) {
     const domain = await this.getDomain(accountId, idOrName);
 
-    if (domain.verificationStatus !== 'verified') {
+    if (domain.ses?.verificationStatus !== 'verified') {
       throw new BadRequestException(
         'Domain is not verified. Please verify your domain before creating email addresses.',
       );

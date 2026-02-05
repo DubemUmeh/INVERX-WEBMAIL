@@ -3,15 +3,20 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  Inject,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { createHash } from 'crypto';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 import { auth } from '../../lib/auth.js';
 import { db } from '../../database/drizzle.js';
 import { accountMembers, accounts } from '../../database/schema/index.js';
 import { eq } from 'drizzle-orm';
+import { DRIZZLE } from '../../database/database.module.js';
+import type { Database } from '../../database/drizzle.js';
+import { ApiKeysRepository } from '../../api-keys/api-keys.repository.js';
 
 export interface JwtPayload {
   sub: string; // user id
@@ -23,10 +28,15 @@ export interface JwtPayload {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+  private apiKeysRepository: ApiKeysRepository;
+
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,
-  ) {}
+    @Inject(DRIZZLE) private drizzleDb: Database,
+  ) {
+    this.apiKeysRepository = new ApiKeysRepository(drizzleDb);
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -187,14 +197,73 @@ export class AuthGuard implements CanActivate {
       console.error('[AuthGuard] Better-Auth session error:', error);
     }
 
-    console.log('[AuthGuard] Falling back to JWT.');
+    console.log('[AuthGuard] Falling back to JWT/API key.');
 
-    // 2. Try JWT Fallback (Legacy or API Keys)
+    // 2. Try API Key (Bearer token starting with inv_)
     const token = this.extractTokenFromHeader(request);
     if (!token) {
       console.warn('[AuthGuard] No token found in headers.');
       throw new UnauthorizedException('Access token is required');
     }
+
+    if (token.startsWith('inv_')) {
+      console.log('[AuthGuard] Attempting API key validation...');
+      console.log(`[AuthGuard] Token prefix: ${token.substring(0, 15)}...`);
+      console.log(`[AuthGuard] Full token length: ${token.length}`);
+      
+      const keyHash = createHash('sha256').update(token).digest('hex');
+      console.log(`[AuthGuard] Computing hash for token...`);
+      console.log(`[AuthGuard] Key hash: ${keyHash}`);
+      
+      console.log('[AuthGuard] Querying database for API key...');
+      const apiKey = await this.apiKeysRepository.findByKeyHash(keyHash);
+      console.log(`[AuthGuard] API key lookup result:`, apiKey ? `Found: ${JSON.stringify({id: apiKey.id, accountId: apiKey.accountId, status: apiKey.status})}` : 'Not found');
+
+      if (!apiKey) {
+        console.warn('[AuthGuard] API key not found in database. This could mean:');
+        console.warn('  1. The key was never created/stored');
+        console.warn('  2. The hash computation differs from storage');
+        console.warn('  3. The database query failed silently');
+        throw new UnauthorizedException('Invalid API key');
+      }
+
+      console.log(`[AuthGuard] API key status: ${apiKey.status}`);
+      if (apiKey.status !== 'active') {
+        console.warn(`[AuthGuard] API key is not active (status: ${apiKey.status}).`);
+        throw new UnauthorizedException('API key is inactive or revoked');
+      }
+
+      console.log(`[AuthGuard] API key expiry: ${apiKey.expiresAt ? apiKey.expiresAt.toISOString() : 'Never'}`);
+      if (apiKey.expiresAt && new Date() > apiKey.expiresAt) {
+        console.warn('[AuthGuard] API key has expired.');
+        throw new UnauthorizedException('API key has expired');
+      }
+
+      console.log(
+        `[AuthGuard] Valid API key found for account: ${apiKey.accountId}`,
+      );
+
+      // Update last used timestamp
+      await this.apiKeysRepository.updateLastUsed(apiKey.id).catch(() => {});
+
+      // Attach user info to request context (use API key's account)
+      request.context = {
+        ...request.context,
+        accountId: apiKey.accountId,
+        apiKeyId: apiKey.id,
+      };
+
+      // Attach minimal user info (API keys don't have user ID, just account)
+      (request as any).user = {
+        sub: 'api-key',
+        email: 'api-key',
+        accountId: apiKey.accountId,
+      };
+      return true;
+    }
+
+    // 3. Try JWT Fallback (Legacy)
+    console.log('[AuthGuard] Token is not an API key, attempting JWT validation...');
 
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);

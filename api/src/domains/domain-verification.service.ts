@@ -113,13 +113,18 @@ export class DomainVerificationService {
     const status = await this.verifyDomain(domainName, dkimSelector);
 
     // Update domain verification status in database
-    await this.domainsRepository.update(domainId, {
+    // Update SES verification status
+    await this.domainsRepository.updateSesStatus(domainId, {
       spfVerified: status.spf.valid,
       dkimVerified: status.dkim.valid,
       dmarcVerified: status.dmarc.valid,
       verificationStatus: status.overallValid ? 'verified' : 'unverified',
-      status: status.overallValid ? 'active' : 'pending',
       lastCheckedAt: status.checkedAt,
+    });
+
+    // Update core domain status
+    await this.domainsRepository.update(domainId, {
+      status: status.overallValid ? 'active' : 'pending',
     });
 
     return status;
@@ -199,7 +204,7 @@ export class DomainVerificationService {
     // Get current domain state
     const domain =
       await this.domainsRepository.findByIdWithoutAccount(domainId);
-    const wasVerified = domain?.verificationStatus === 'verified';
+    const wasVerified = domain?.ses?.verificationStatus === 'verified';
 
     // Perform verification
     const status = await this.verifyAndUpdateDomain(

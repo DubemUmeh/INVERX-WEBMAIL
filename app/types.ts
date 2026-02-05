@@ -63,21 +63,23 @@ export interface Domain {
   id: string;
   name: string;
   status: "active" | "pending" | "failed" | "expired";
-  verificationStatus: "verified" | "unverified" | "pending";
   autoRenew: boolean;
   expiresAt?: string;
-  dkimVerified: boolean;
-  spfVerified: boolean;
-  dmarcVerified: boolean;
-  lastCheckedAt?: string;
   createdAt: string;
-  // Provider integrations (from new tables)
+  // Provider integrations
   cloudflare?: {
     zoneId: string;
     nameservers: string[];
     mode: "managed" | "external";
     status: string;
     lastSyncedAt?: string;
+  };
+  ses?: {
+    verificationStatus: "verified" | "unverified" | "pending";
+    dkimVerified: boolean;
+    spfVerified: boolean;
+    dmarcVerified: boolean;
+    lastCheckedAt?: string;
   };
 }
 

@@ -21,9 +21,20 @@ export class SesSyncService {
         domain.name,
       );
 
+      // Get existing SES integration record
+      let sesIntegration =
+        await this.domainsRepository.getSesByDomainId(domainId);
+
+      // If no integration record exists (e.g. created before migration), create one
+      if (!sesIntegration) {
+        sesIntegration = await this.domainsRepository.createSesIntegration({
+          domainId,
+          verificationStatus: 'unverified',
+        });
+      }
+
       let verificationStatus: 'verified' | 'unverified' | 'pending' =
-        (domain.verificationStatus as 'verified' | 'unverified' | 'pending') ||
-        'unverified';
+        sesIntegration?.verificationStatus || 'unverified';
 
       if (status === 'Success') {
         verificationStatus = 'verified';
@@ -35,12 +46,20 @@ export class SesSyncService {
         verificationStatus = 'unverified';
       }
 
-      // Update if changed
-      if (verificationStatus !== domain.verificationStatus) {
-        await this.domainsRepository.update(domainId, {
+      // Update SES integration status if changed or just to refresh checkedAt
+      if (verificationStatus !== sesIntegration?.verificationStatus) {
+        await this.domainsRepository.updateSesStatus(domainId, {
           verificationStatus,
           lastCheckedAt: new Date(),
         });
+
+        // If SES is verified, we can mark the domain as active overall
+        if (verificationStatus === 'verified' && domain.status !== 'active') {
+          await this.domainsRepository.update(domainId, {
+            status: 'active',
+          });
+        }
+
         this.logger.log(
           `Synced domain ${domain.name} status to ${verificationStatus}`,
         );

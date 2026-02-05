@@ -170,7 +170,7 @@ export class MailService {
             senderDomain,
           );
 
-          if (domain.verificationStatus !== 'verified') {
+          if (domain.ses?.verificationStatus !== 'verified') {
             throw new BadRequestException(
               `Cannot send from ${fromEmail}. The domain ${senderDomain} is not verified. Please verify your domain first.`,
             );

@@ -443,22 +443,33 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                   <div>
                       <h1 className="text-2xl font-bold text-white mb-1">{domainName}</h1>
                       <div className="flex items-center gap-2">
-                        {domain.status === 'active' && (
+                        {/* Prioritize Cloudflare status if managed, otherwise fallback to domain status */}
+                        {(domain.cloudflare?.status === 'active' || (!domain.cloudflare && domain.status === 'active')) && (
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                               <CheckCircle size={12} fill="currentColor" /> Active
                           </span>
                         )}
-                        {domain.status === 'pending' && (
+                        {(domain.cloudflare?.status === 'pending' || (!domain.cloudflare && domain.status === 'pending')) && (
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                               <AlertTriangle size={12} className="text-amber-400" /> Pending
                           </span>
                         )} 
                         {domain.cloudflare?.mode === 'managed' && (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20" title={`Last synced: ${domain.cloudflare.lastSyncedAt ? new Date(domain.cloudflare.lastSyncedAt).toLocaleString() : 'Never'}`}>
                               <span className="size-2 bg-orange-400 rounded-full" /> Cloudflare
                           </span>
                         )}
-                        <span className="text-text-secondary text-sm">• {domain.verificationStatus}</span>
+                        <span className="text-text-secondary text-sm flex items-center gap-1.5 ml-1">
+                          <span className="opacity-50">•</span>
+                          <span className="opacity-70">Verification Status:</span>
+                          {domain.ses?.verificationStatus === 'verified' ? (
+                            <span className="text-emerald-400 font-medium">Email Ready</span>
+                          ) : domain.cloudflare?.status === 'active' ? (
+                            <span className="text-blue-400 font-medium">DNS Verified (Syncing)</span>
+                          ) : (
+                            <span className="text-amber-400 font-medium">Pending</span>
+                          )}
+                        </span>
                       </div>
                   </div>
                 </div>

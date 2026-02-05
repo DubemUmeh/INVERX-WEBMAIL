@@ -18,6 +18,11 @@ export class ApiKeysService {
     const keyPrefix = key.substring(0, 10);
     const keyHash = createHash('sha256').update(key).digest('hex');
 
+    console.log(`[ApiKeysService.createApiKey] Creating API key for account: ${accountId}`);
+    console.log(`[ApiKeysService.createApiKey] Generated key: ${key}`);
+    console.log(`[ApiKeysService.createApiKey] Key hash: ${keyHash}`);
+    console.log(`[ApiKeysService.createApiKey] Key prefix: ${keyPrefix}`);
+
     const apiKey = await this.apiKeysRepository.create({
       accountId,
       createdBy: userId,
@@ -27,6 +32,8 @@ export class ApiKeysService {
       scopes: dto.scopes,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
     });
+
+    console.log(`[ApiKeysService.createApiKey] Key created successfully with ID: ${apiKey.id}`);
 
     // Return the full key only on creation
     return {
