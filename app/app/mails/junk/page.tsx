@@ -1,5 +1,7 @@
 import { cookies } from "next/headers"
 import { constructMetadata } from "@/lib/seo"
+import { Mail } from "../components/mail"
+import { accounts } from "../data"
 
 export const metadata = constructMetadata({
   title: "Junk & Spam",
@@ -16,13 +18,13 @@ export default async function MailJunkPage() {
 
   return (
     <div className="flex flex-col h-screen no-scrollbar">
-        <Mail
-          accounts={accounts}
-          defaultLayout={defaultLayout}
-          defaultCollapsed={defaultCollapsed}
-          navCollapsedSize={4}
-          folder="junk"
-        />
+      <Mail
+        accounts={accounts}
+        defaultLayout={defaultLayout}
+        defaultCollapsed={defaultCollapsed}
+        navCollapsedSize={4}
+        folder="junk"
+      />
     </div>
   )
 }

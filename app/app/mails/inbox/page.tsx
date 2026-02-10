@@ -19,13 +19,13 @@ export default async function MailInboxPage() {
 
   return (
     <div className="flex flex-col h-screen no-scrollbar">
-       <Mail
-          accounts={accounts}
-          defaultLayout={defaultLayout}
-          defaultCollapsed={defaultCollapsed}
-          navCollapsedSize={4}
-          folder="inbox"
-        />
+      <Mail
+        accounts={accounts}
+        defaultLayout={defaultLayout}
+        defaultCollapsed={defaultCollapsed}
+        navCollapsedSize={4}
+        folder="inbox"
+      />
     </div>
   )
 }

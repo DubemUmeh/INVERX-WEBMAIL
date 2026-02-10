@@ -1,5 +1,7 @@
 import { cookies } from "next/headers"
 import { constructMetadata } from "@/lib/seo"
+import { Mail } from "../components/mail"
+import { accounts } from "../data"
 
 export const metadata = constructMetadata({
   title: "Drafts",
