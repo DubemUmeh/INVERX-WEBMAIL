@@ -71,5 +71,7 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins: [`${WEB_URL}`, `${APP_URL}`],
+  trustedOrigins: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
+    : [`${WEB_URL}`, `${APP_URL}`],
 });
