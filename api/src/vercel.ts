@@ -21,14 +21,6 @@ const bootstrap = async () => {
 };
 
 export default async function handler(req: any, res: any) {
-  if (
-    req.url.startsWith('/api/auth/sign-in/email') &&
-    req.method === 'OPTIONS'
-  ) {
-    res.status(204).end();
-    return;
-  }
-
   await bootstrap();
 
   // Vercel serverless functions need the express instance to handle the request
