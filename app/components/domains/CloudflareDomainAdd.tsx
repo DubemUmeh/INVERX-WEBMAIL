@@ -81,8 +81,12 @@ export default function CloudflareDomainAdd() {
     try {
       const data = await domainsApi.verify(createdDomain.name);
       
-      if (data.verified) {
-        toast.success('Domain verified successfully!');
+      if (data.verified || data.cloudflareStatus === 'active') {
+        if (data.verified) {
+          toast.success('Domain verified successfully!');
+        } else {
+          toast.success('DNS connected! SES verification pending.');
+        }
         router.push(`/domains/${createdDomain.name}`);
       } else if (data.delegation && data.delegation.delegated === false) {
         const expected = (data.delegation.expected || []).join(', ');

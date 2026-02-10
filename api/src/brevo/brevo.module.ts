@@ -13,9 +13,10 @@ import { DomainVerificationJob } from './jobs/domain-verification.job.js';
 import { SmtpModule } from '../smtp/smtp.module.js';
 import { CloudflareModule } from '../cloudflare/cloudflare.module.js';
 import { DomainsModule } from '../domains/domains.module.js';
+import { UsersModule } from '../users/users.module.js';
 
 @Module({
-  imports: [SmtpModule, CloudflareModule, DomainsModule], // For SmtpCryptoService, CloudflareService, DomainsRepository
+  imports: [SmtpModule, CloudflareModule, DomainsModule, UsersModule], // For SmtpCryptoService, CloudflareService, DomainsRepository, UsersRepository
   controllers: [BrevoController],
   providers: [
     BrevoService,

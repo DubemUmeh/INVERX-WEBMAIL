@@ -45,9 +45,10 @@ export class BrevoController {
   @Post('connect')
   async connect(
     @CurrentUser('accountId') accountId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: ConnectBrevoDto,
   ) {
-    return this.brevoService.connect(accountId, dto);
+    return this.brevoService.connect(accountId, userId, dto);
   }
 
   /**
@@ -107,9 +108,10 @@ export class BrevoController {
   @Post('domains')
   async addDomain(
     @CurrentUser('accountId') accountId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: CreateBrevoDomainDto,
   ) {
-    return this.brevoService.addDomain(accountId, dto);
+    return this.brevoService.addDomain(accountId, userId, dto);
   }
 
   /**
@@ -166,9 +168,10 @@ export class BrevoController {
   @Post('senders')
   async createSender(
     @CurrentUser('accountId') accountId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: CreateBrevoSenderDto,
   ) {
-    return this.brevoService.createSender(accountId, dto);
+    return this.brevoService.createSender(accountId, userId, dto);
   }
 
   /**

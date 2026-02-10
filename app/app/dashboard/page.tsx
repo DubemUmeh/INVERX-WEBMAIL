@@ -108,8 +108,19 @@ export default function Page() {
     }
   };
 
-  const verifiedDomainsCount = domains.filter(d => d.status === 'active' || d.verificationStatus === 'verified').length;
-  const unverifiedDomain = domains.find(d => d.status !== 'active' && d.verificationStatus !== 'verified');
+  // For Cloudflare-managed domains: check domain.status === 'active' (DNS is ready)
+  // For AWS/manual domains: check domain.ses?.verificationStatus === 'verified' (SES email is ready)
+  const verifiedDomainsCount = domains.filter(d => 
+    d.status === 'active' || 
+    d.cloudflare?.status === 'active' || 
+    d.ses?.verificationStatus === 'verified'
+  ).length;
+  
+  const unverifiedDomain = domains.find(d => 
+    d.status !== 'active' && 
+    d.cloudflare?.status !== 'active' && 
+    d.ses?.verificationStatus !== 'verified'
+  );
 
   if (isLoading && !profile) {
     return (

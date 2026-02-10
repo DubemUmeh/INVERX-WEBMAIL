@@ -7,7 +7,7 @@ import {
   List,
   Globe,
   Key,
-  Settings,
+  Server,
   Shield,
   Layout,
   LogOut,
@@ -135,14 +135,14 @@ export default function ActivitySidebar() {
         <Link 
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group",
-            isActive('/configuration') 
+            isActive('/smtp') 
               ? "bg-primary/20 text-white border-l-2 border-primary" 
               : "text-text-secondary hover:bg-border-dark hover:text-white"
           )}
-          href="/configuration"
+          href="/smtp"
         >
-          <Settings size={20} className="group-hover:text-white transition-colors" />
-          <span className="text-sm font-medium">Configuration</span>
+          <Server size={20} className="group-hover:text-white transition-colors" />
+          <span className="text-sm font-medium">SMTP Config</span>
         </Link>
         <Link 
           className={cn(

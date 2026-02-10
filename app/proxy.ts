@@ -17,7 +17,7 @@ export const config = {
   matcher: [
     "/access-control/:path*",
     "/activity/:path*",
-    "/configuration/:path*",
+    "/smtp/:path*",
     "/dashboard/:path*",
     "/domains/:path*",
     "/mails/:path*",

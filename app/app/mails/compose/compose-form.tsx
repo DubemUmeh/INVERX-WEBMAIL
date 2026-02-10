@@ -287,60 +287,21 @@ export function ComposeForm() {
       const senderDisplayName = selectedSender.displayName;
       const senderType = selectedSender.type || 'domain';
 
-      if (senderType === 'brevo') {
-        await brevoApi.sendEmailWithSender({
-          senderEmail: senderEmail,
-          senderName: senderDisplayName,
-          to: formState.toRecipients[0], // Brevo sends individually or handles batch differently, but here we assume simple send. For multiple recipients we might need loop or check API. Standard mailApi handles list.
-          // Note: Our backend sendEmailWithSender takes 'to' as string. 
-          // If we have multiple recipients, we should probably loop or join. 
-          // Let's assume singular 'to' for initial brevo impl or just take first one as per interface mismatch risk.
-          // Actually, our API takes 'to' string. If we want multiple, we need to iterate.
-          // Let's iterate for safety if multiple recipients.
-          subject: formState.subject,
-          htmlContent: formState.bodyHtml,
-          textContent: formState.bodyText,
-        });
-
-        // If multiple recipients for Brevo, we'd need loop.
-        // But let's check mailApi.sendMessage implementation. It likely handles array.
-        // For Brevo, if we want to support multiple, we should likely update backend to accept array or loop here.
-        // For now, let's keep it simple and assume single TO for MVP or just send to all via loop if needed.
-        // Actually, mailApi.sendMessage takes 'to: string[]'.
-        // Let's update backend DTO to match or handle here.
-        // Wait, backend 'sendEmailWithSender' takes 'to: string'.
-        // So I must loop here for Brevo if multiple recipients.
-        
-        if (formState.toRecipients.length > 1) {
-          // Send to others
-          const otherRecipients = formState.toRecipients.slice(1);
-          await Promise.all(otherRecipients.map(to => 
-            brevoApi.sendEmailWithSender({
-              senderEmail: senderEmail,
-              senderName: senderDisplayName,
-              to: to,
-              subject: formState.subject,
-              htmlContent: formState.bodyHtml,
-              textContent: formState.bodyText,
-            })
-          ));
-        }
-
-      } else {
-        // Domain or SMTP sending
-        // Pass the extra params if SMTP
-        await mailApi.sendMessage({
-          from: senderEmail, // Use the actual email
-          to: formState.toRecipients,
-          cc: formState.ccRecipients,
-          bcc: formState.bccRecipients,
-          subject: formState.subject,
-          text: formState.bodyText,
-          html: formState.bodyHtml,
-          domainId: selectedSender.domainId, // Pass domainId if available
-          smtpConfigId: selectedSender.smtpId, // Pass smtpId if available
-        });
-      }
+      // const senderEmail = selectedSender.email;
+      
+      // All sender types (Domain, SMTP, Brevo) now go through mailApi.sendMessage
+      // which uses the unified backend MailService.sendMail logic.
+      await mailApi.sendMessage({
+        from: senderEmail,
+        to: formState.toRecipients,
+        cc: formState.ccRecipients,
+        bcc: formState.bccRecipients,
+        subject: formState.subject,
+        bodyText: formState.bodyText,
+        bodyHtml: formState.bodyHtml,
+        domainId: selectedSender.domainId,
+        smtpConfigId: selectedSender.smtpId,
+      });
       
       setStatus(prev => ({ 
         ...prev, 

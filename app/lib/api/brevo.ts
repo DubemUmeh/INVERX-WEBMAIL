@@ -7,13 +7,14 @@
 import { api } from "./client";
 
 // Types
+// Types
 export type BrevoDnsMode = "cloudflare-managed" | "manual";
 export type BrevoDomainStatus =
   | "pending_dns"
   | "verifying"
   | "verified"
   | "failed";
-export type BrevoSendingTier = "restricted" | "standard";
+export type BrevoSendingTier = "restricted" | "standard" | string;
 
 export interface BrevoDnsRecord {
   type: "TXT" | "CNAME";
@@ -106,12 +107,15 @@ export interface BrevoAccountDomainDnsRecord {
 }
 
 export interface BrevoAccountDomain {
-  id: number;
+  id: string | number;
   domainName: string;
   authenticated: boolean;
   dnsRecords: {
-    dkimRecord: BrevoAccountDomainDnsRecord | null;
-    brevoCode: BrevoAccountDomainDnsRecord | null;
+    dkimRecord?: BrevoAccountDomainDnsRecord | null;
+    dkim1Record?: BrevoAccountDomainDnsRecord | null;
+    dkim2Record?: BrevoAccountDomainDnsRecord | null;
+    brevoCode?: BrevoAccountDomainDnsRecord | null;
+    dmarc_record?: BrevoAccountDomainDnsRecord | null;
   } | null;
 }
 

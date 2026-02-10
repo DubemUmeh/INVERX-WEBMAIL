@@ -8,9 +8,10 @@ import { SesClientService } from './ses/ses.client.js';
 import { SesVerificationService } from './ses/ses-verification.service.js';
 import { SesSyncService } from './ses/ses-sync.service.js';
 import { CloudflareModule } from '../cloudflare/cloudflare.module.js';
+import { UsersModule } from '../users/users.module.js';
 
 @Module({
-  imports: [CloudflareModule],
+  imports: [CloudflareModule, UsersModule],
   controllers: [DomainsController],
   providers: [
     DomainsService,

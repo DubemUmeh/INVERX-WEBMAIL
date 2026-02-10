@@ -1,6 +1,13 @@
 import { cookies } from "next/headers"
 import { accounts } from "../data"
 import { ComposeView } from "./compose-view"
+import { constructMetadata } from "@/lib/seo"
+
+export const metadata = constructMetadata({
+  title: "Compose Message",
+  description: "Create and send a new email message using your configured providers.",
+})
+
 
 export default async function ComposePage() {
   const layout = (await cookies()).get("react-resizable-panels:layout:mail-compose")

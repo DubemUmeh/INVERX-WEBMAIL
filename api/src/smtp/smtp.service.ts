@@ -10,6 +10,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { SmtpRepository } from './smtp.repository.js';
 import { SmtpCryptoService } from './smtp-crypto.service.js';
@@ -39,6 +40,7 @@ export interface SmtpConfigResponse {
 }
 
 import { DomainsService } from '../domains/domains.service.js';
+import { UsersRepository } from '../users/users.repository.js';
 
 @Injectable()
 export class SmtpService {
@@ -47,6 +49,7 @@ export class SmtpService {
     private cryptoService: SmtpCryptoService,
     private emailService: SmtpEmailService,
     private domainsService: DomainsService,
+    private usersRepository: UsersRepository,
   ) {}
 
   /**
@@ -143,6 +146,14 @@ export class SmtpService {
     userId: string,
     dto: CreateSmtpConfigDto,
   ): Promise<SmtpConfigResponse> {
+    // Check if user is verified
+    const user = await this.usersRepository.findById(userId);
+    if (!user || !user.isVerified) {
+      throw new ForbiddenException(
+        'User verification required to add SMTP configurations.',
+      );
+    }
+
     // Check if crypto is available when password is provided
     if (dto.password && !this.cryptoService.isAvailable()) {
       throw new BadRequestException(

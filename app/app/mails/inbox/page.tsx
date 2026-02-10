@@ -1,4 +1,10 @@
 import { cookies } from "next/headers"
+import { constructMetadata } from "@/lib/seo"
+
+export const metadata = constructMetadata({
+  title: "Inbox",
+  description: "View and manage your incoming emails.",
+})
 
 
 import { Mail } from "../components/mail"

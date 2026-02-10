@@ -86,8 +86,8 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white pb-24">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white pt-20 pb-24">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-8 space-y-6">
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-center w-full">

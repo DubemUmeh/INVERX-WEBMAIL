@@ -20,10 +20,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useSession } from "@/lib/auth-client";
+import { AlertTriangle } from "lucide-react";
 
 export default function DomainsSettingsPage() {
   const [domains, setDomains] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { data: session } = useSession();
+  const isVerified = session?.user?.emailVerified;
 
   useEffect(() => {
     fetchDomains();
@@ -65,7 +75,7 @@ export default function DomainsSettingsPage() {
         </div>
         <div className="grid gap-4">
           {[1, 2, 3].map((i) => (
-             <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
       </div>
@@ -83,12 +93,37 @@ export default function DomainsSettingsPage() {
             Manage your custom domains and DNS settings.
           </p>
         </div>
-        <Button asChild className="bg-primary text-primary-foreground">
-          <Link href="/domains/add">
-            <Plus className="mr-2 h-4 w-4" /> Add Domain
-          </Link>
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button asChild className="bg-primary text-primary-foreground" disabled={!isVerified}>
+                  <Link href={isVerified ? "/domains/add" : "#"} className={!isVerified ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Domain
+                  </Link>
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {!isVerified && (
+              <TooltipContent>
+                <p>Verification required to add domains</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
+
+      {!isVerified && !isLoading && (
+        <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+          <AlertTriangle className="text-amber-500 mt-0.5" size={18} />
+          <div>
+            <h4 className="text-amber-500 text-sm font-bold">Unverified Account</h4>
+            <p className="text-amber-500/80 text-xs mt-1">
+              Your email address is not verified. You must verify your email before you can add new domains or SMTP configurations.
+            </p>
+          </div>
+        </div>
+      )}
 
       {domains.length > 0 ? (
         <div className="grid gap-4">

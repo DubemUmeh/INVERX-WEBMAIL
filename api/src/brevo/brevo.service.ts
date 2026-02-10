@@ -29,6 +29,7 @@ import { BrevoDnsRecord } from '../database/schema/index.js';
 
 import { CloudflareService } from '../cloudflare/cloudflare.service.js';
 import { DomainsRepository } from '../domains/domains.repository.js';
+import { UsersRepository } from '../users/users.repository.js';
 
 // Rate limits by tier
 const RATE_LIMITS = {
@@ -46,6 +47,7 @@ export class BrevoService {
     private cryptoService: SmtpCryptoService,
     private cloudflareService: CloudflareService,
     private domainsRepository: DomainsRepository,
+    private usersRepository: UsersRepository,
   ) {}
 
   // =====================
@@ -53,7 +55,7 @@ export class BrevoService {
   // =====================
 
   /**
-   * Get connection status for an account
+   * Get connection status for an account (fetches real stats from Brevo)
    */
   async getConnectionStatus(accountId: string) {
     const connection =
@@ -63,12 +65,33 @@ export class BrevoService {
       return { connected: false };
     }
 
+    // Decrypt API key to fetch real stats from Brevo
+    const apiKey = await this.getApiKey(accountId);
+
+    let dailySendCount = 0;
+    let planType = 'free';
+
+    try {
+      // Fetch today's send statistics from Brevo
+      const stats = await this.brevoApi.getSmtpStatistics(apiKey);
+      dailySendCount = stats.requests || 0;
+
+      // Fetch account info for plan type
+      const accountInfo = await this.brevoApi.getAccount(apiKey);
+      if (accountInfo.plan && accountInfo.plan.length > 0) {
+        planType = accountInfo.plan[0].type || 'free';
+      }
+    } catch (error: any) {
+      this.logger.warn(`Failed to fetch Brevo stats: ${error.message}`);
+      // Continue with defaults
+    }
+
     return {
       connected: true,
       status: connection.status,
-      sendingTier: connection.sendingTier,
+      sendingTier: planType,
       email: connection.email,
-      dailySendCount: connection.dailySendCount,
+      dailySendCount: dailySendCount,
       lastValidatedAt: connection.lastValidatedAt,
       createdAt: connection.createdAt,
       isCloudflareAvailable: this.cloudflareService.isAvailable(),
@@ -78,7 +101,15 @@ export class BrevoService {
   /**
    * Connect a Brevo account by validating and storing API key
    */
-  async connect(accountId: string, dto: ConnectBrevoDto) {
+  async connect(accountId: string, userId: string, dto: ConnectBrevoDto) {
+    // Check if user is verified
+    const user = await this.usersRepository.findById(userId);
+    if (!user || !user.isVerified) {
+      throw new ForbiddenException(
+        'User verification required to connect Brevo accounts.',
+      );
+    }
+
     // Check for existing connection
     const existing = await this.repository.findConnectionByAccountId(accountId);
     if (existing) {
@@ -191,31 +222,60 @@ export class BrevoService {
       const result = await this.brevoApi.listDomains(apiKey);
       const domains = result.domains || [];
 
-      return domains.map((d) => ({
-        id: d.id,
-        domainName: d.domain_name,
-        authenticated: d.authenticated,
-        dnsRecords: d.dns_records
-          ? {
-              dkimRecord: d.dns_records.dkim_record
+      // Fetch detailed info for each domain to get DNS records
+      // The listDomains endpoint doesn't include DNS records
+      const detailedDomains = await Promise.all(
+        domains.map(async (d) => {
+          try {
+            // Fetch individual domain details which includes DNS records
+            const details = await this.brevoApi.getDomain(
+              apiKey,
+              d.domain_name,
+            );
+            this.logger.log(
+              `Domain ${d.domain_name} DNS records: ${JSON.stringify(details.dns_records)}`,
+            );
+            return {
+              id: d.id, // Use ID from list to result
+              domainName: d.domain_name, // Use domain_name from list result (confirmed by logs)
+              authenticated: details.authenticated,
+              dnsRecords: details.dns_records
                 ? {
-                    type: d.dns_records.dkim_record.type,
-                    host: d.dns_records.dkim_record.host_name,
-                    value: d.dns_records.dkim_record.value,
-                    verified: d.dns_records.dkim_record.status,
+                    dkimRecord: details.dns_records.dkim_record
+                      ? {
+                          type: details.dns_records.dkim_record.type,
+                          host: details.dns_records.dkim_record.host_name,
+                          value: details.dns_records.dkim_record.value,
+                          verified: details.dns_records.dkim_record.status,
+                        }
+                      : null,
+                    brevoCode: details.dns_records.brevo_code
+                      ? {
+                          type: details.dns_records.brevo_code.type,
+                          host: details.dns_records.brevo_code.host_name,
+                          value: details.dns_records.brevo_code.value,
+                          verified: details.dns_records.brevo_code.status,
+                        }
+                      : null,
                   }
                 : null,
-              brevoCode: d.dns_records.brevo_code
-                ? {
-                    type: d.dns_records.brevo_code.type,
-                    host: d.dns_records.brevo_code.host_name,
-                    value: d.dns_records.brevo_code.value,
-                    verified: d.dns_records.brevo_code.status,
-                  }
-                : null,
-            }
-          : null,
-      }));
+            };
+          } catch (detailError: any) {
+            this.logger.warn(
+              `Failed to fetch details for domain ${d.domain_name}: ${detailError.message}`,
+            );
+            // Return basic info without DNS records if fetch fails
+            return {
+              id: d.id,
+              domainName: d.domain_name,
+              authenticated: d.authenticated,
+              dnsRecords: null,
+            };
+          }
+        }),
+      );
+
+      return detailedDomains;
     } catch (error: any) {
       this.logger.error(`Failed to fetch Brevo domains: ${error.message}`);
       throw new BadRequestException(
@@ -284,7 +344,7 @@ export class BrevoService {
   }
 
   /**
-   * List domains for an account
+   * List domains for an account (auto-syncs from Brevo first)
    */
   async listDomains(accountId: string) {
     const connection =
@@ -293,9 +353,17 @@ export class BrevoService {
       throw new NotFoundException('No Brevo connection found');
     }
 
+    // Sync domains from Brevo API to local DB first
+    await this.syncDomainsFromBrevo(accountId);
+
+    this.logger.log(`Fetching domains for connection ${connection.id}`);
     const domains = await this.repository.findDomainsByConnectionId(
       connection.id,
     );
+    this.logger.log(
+      `Found ${domains.length} domains in DB: ${domains.map((d) => `${d.domainName}(${d.status}, archived=${d.isArchived})`).join(', ')}`,
+    );
+
     return domains.map((d) => ({
       id: d.id,
       domainName: d.domainName,
@@ -312,60 +380,227 @@ export class BrevoService {
   }
 
   /**
+   * Sync domains from Brevo API to local database
+   * Creates missing domains and updates existing ones with current status
+   */
+  async syncDomainsFromBrevo(accountId: string) {
+    const { apiKey, connection } = await this.getApiKeyFromAccount(accountId);
+
+    try {
+      // Fetch domains from Brevo API
+      const result = await this.brevoApi.listDomains(apiKey);
+      const brevoDomains = result.domains || [];
+
+      this.logger.log(`Syncing ${brevoDomains.length} domains from Brevo API`);
+
+      for (const brevoDomain of brevoDomains) {
+        // Check if domain exists locally
+        const existing = await this.repository.findDomainByName(
+          connection.id,
+          brevoDomain.domain_name,
+        );
+
+        if (existing) {
+          // Update existing domain with Brevo status
+          const newStatus = brevoDomain.authenticated
+            ? 'verified'
+            : 'verifying';
+          if (existing.status !== newStatus) {
+            this.logger.log(
+              `Updating domain ${brevoDomain.domain_name} status: ${existing.status} -> ${newStatus}`,
+            );
+            await this.repository.updateDomain(existing.id, {
+              status: newStatus as 'verified' | 'verifying',
+              brevoDomainId: String(brevoDomain.id),
+              lastCheckedAt: new Date(),
+            });
+          }
+        } else {
+          // Create new domain record from Brevo
+          this.logger.log(
+            `Creating local record for Brevo domain: ${brevoDomain.domain_name} (authenticated=${brevoDomain.authenticated})`,
+          );
+          await this.repository.createDomain({
+            connectionId: connection.id,
+            domainName: brevoDomain.domain_name,
+            brevoDomainId: String(brevoDomain.id),
+            dnsMode: 'manual', // Default to manual since we don't know how it was set up
+          });
+
+          // Update status based on Brevo authentication
+          const newDomain = await this.repository.findDomainByName(
+            connection.id,
+            brevoDomain.domain_name,
+          );
+          if (newDomain && brevoDomain.authenticated) {
+            await this.repository.updateDomain(newDomain.id, {
+              status: 'verified',
+              lastCheckedAt: new Date(),
+            });
+          }
+        }
+      }
+    } catch (error: any) {
+      this.logger.warn(`Failed to sync domains from Brevo: ${error.message}`);
+      // Don't fail the list operation, just continue with local data
+    }
+  }
+
+  /**
    * Add a domain (idempotent - returns existing if duplicate)
    * Supports two modes:
    * 1. existingDomainId provided: Use existing domain from Domain Management, add Brevo DNS to its Cloudflare zone
    * 2. Manual: Create new domain in Brevo with manual DNS setup
    */
-  async addDomain(accountId: string, dto: CreateBrevoDomainDto) {
+  async addDomain(
+    accountId: string,
+    userId: string,
+    dto: CreateBrevoDomainDto,
+  ) {
+    // Check if user is verified
+    const user = await this.usersRepository.findById(userId);
+    if (!user || !user.isVerified) {
+      throw new ForbiddenException(
+        'User verification required to add Brevo domains.',
+      );
+    }
+
     const { apiKey, connection } = await this.getApiKeyFromAccount(accountId);
 
-    // Check for existing domain (idempotent)
+    // Check for existing domain in local database
     const existing = await this.repository.findDomainByName(
       connection.id,
       dto.domainName,
     );
+
+    // If domain exists locally, check if it's properly set up in Brevo and has DNS records
     if (existing) {
-      this.logger.log(
-        `Domain ${dto.domainName} already exists, returning existing`,
-      );
+      // Verify domain exists in Brevo
+      let brevoDomainExists = false;
+      let brevoDomain;
+      try {
+        brevoDomain = await this.brevoApi.getDomain(apiKey, dto.domainName);
+        brevoDomainExists = true;
+        this.logger.log(`Domain ${dto.domainName} exists in Brevo`);
+      } catch {
+        this.logger.log(
+          `Domain ${dto.domainName} not found in Brevo, will create`,
+        );
+      }
+
+      // If domain exists in Brevo and is verified, just return existing
+      if (brevoDomainExists && existing.status === 'verified') {
+        this.logger.log(
+          `Domain ${dto.domainName} already verified, returning existing`,
+        );
+        return existing;
+      }
+
+      // If domain doesn't exist in Brevo, create it
+      if (!brevoDomainExists) {
+        try {
+          brevoDomain = await this.brevoApi.createDomain(
+            apiKey,
+            dto.domainName,
+          );
+          this.logger.log(`Created domain ${dto.domainName} in Brevo`);
+          // Update local record with Brevo ID
+          await this.repository.updateDomain(existing.id, {
+            brevoDomainId: String(brevoDomain.id),
+          });
+        } catch (createError: any) {
+          throw new BadRequestException(
+            `Failed to create domain in Brevo: ${createError.message}`,
+          );
+        }
+      }
+
+      // Add DNS records to Cloudflare if this is a cloudflare-managed domain
+      if (
+        dto.existingDomainId &&
+        this.cloudflareService.isAvailable() &&
+        brevoDomain?.dns_records
+      ) {
+        await this.addBrevoRecordsToCloudflare(
+          apiKey,
+          dto.domainName,
+          brevoDomain,
+          existing.id,
+        );
+      }
+
       return existing;
     }
 
-    // Create domain in Brevo
+    // Check if domain already exists in Brevo first, then create if not
     let brevoDomain;
     try {
-      brevoDomain = await this.brevoApi.createDomain(apiKey, dto.domainName);
-    } catch (error: any) {
-      // Check if domain already exists in Brevo
-      if (
-        error.message?.includes('409') ||
-        error.message?.includes('already exists')
-      ) {
-        brevoDomain = await this.brevoApi.getDomain(apiKey, dto.domainName);
-      } else {
+      // Try to get existing domain first
+      brevoDomain = await this.brevoApi.getDomain(apiKey, dto.domainName);
+      this.logger.log(
+        `Domain ${dto.domainName} already exists in Brevo, using existing`,
+      );
+    } catch {
+      // Domain doesn't exist in Brevo, create it
+      this.logger.log(`Creating new domain ${dto.domainName} in Brevo`);
+      try {
+        brevoDomain = await this.brevoApi.createDomain(apiKey, dto.domainName);
+        this.logger.log(
+          `Created domain ${dto.domainName} in Brevo successfully`,
+        );
+      } catch (createError: any) {
         throw new BadRequestException(
-          `Failed to create domain in Brevo: ${error.message}`,
+          `Failed to create domain in Brevo: ${createError.message}`,
         );
       }
     }
 
-    // Extract DNS records from Brevo response
+    // Extract DNS records from Brevo response (handles both new and legacy format)
     const dnsRecords: BrevoDnsRecord[] = [];
-    if (brevoDomain.dns_records?.dkim_record) {
+    const dns = brevoDomain.dns_records;
+
+    // New format: dkim1Record and dkim2Record
+    if (dns?.dkim1Record) {
       dnsRecords.push({
-        type: brevoDomain.dns_records.dkim_record.type,
-        host: brevoDomain.dns_records.dkim_record.host_name,
-        value: brevoDomain.dns_records.dkim_record.value,
+        type: dns.dkim1Record.type,
+        host: dns.dkim1Record.host_name,
+        value: dns.dkim1Record.value,
         purpose: 'dkim',
       });
     }
-    if (brevoDomain.dns_records?.brevo_code) {
+    if (dns?.dkim2Record) {
       dnsRecords.push({
-        type: brevoDomain.dns_records.brevo_code.type,
-        host: brevoDomain.dns_records.brevo_code.host_name,
-        value: brevoDomain.dns_records.brevo_code.value,
+        type: dns.dkim2Record.type,
+        host: dns.dkim2Record.host_name,
+        value: dns.dkim2Record.value,
+        purpose: 'dkim',
+      });
+    }
+    // Legacy format: dkim_record
+    if (dns?.dkim_record) {
+      dnsRecords.push({
+        type: dns.dkim_record.type,
+        host: dns.dkim_record.host_name,
+        value: dns.dkim_record.value,
+        purpose: 'dkim',
+      });
+    }
+    // brevo_code
+    if (dns?.brevo_code) {
+      dnsRecords.push({
+        type: dns.brevo_code.type,
+        host: dns.brevo_code.host_name,
+        value: dns.brevo_code.value,
         purpose: 'brevo-code',
+      });
+    }
+    // dmarc_record
+    if (dns?.dmarc_record) {
+      dnsRecords.push({
+        type: dns.dmarc_record.type,
+        host: dns.dmarc_record.host_name,
+        value: dns.dmarc_record.value,
+        purpose: 'dmarc',
       });
     }
 
@@ -493,6 +728,139 @@ export class BrevoService {
   }
 
   /**
+   * Helper: Add Brevo DNS records to existing Cloudflare zone
+   */
+  private async addBrevoRecordsToCloudflare(
+    apiKey: string,
+    domainName: string,
+    brevoDomain: any,
+    localDomainId: string,
+  ) {
+    try {
+      this.logger.log(
+        `Adding Brevo DNS records to Cloudflare for ${domainName}`,
+      );
+
+      // Extract DNS records from Brevo response
+      this.logger.log(
+        `Brevo domain response: id=${brevoDomain.id}, authenticated=${brevoDomain.authenticated}`,
+      );
+      this.logger.log(
+        `Brevo dns_records: ${JSON.stringify(brevoDomain.dns_records)}`,
+      );
+
+      const dnsRecords: {
+        type: 'TXT' | 'CNAME';
+        host: string;
+        value: string;
+      }[] = [];
+
+      const dns = brevoDomain.dns_records;
+
+      // Handle new format: dkim1Record and dkim2Record (CNAME records)
+      if (dns?.dkim1Record) {
+        this.logger.log(
+          `Found dkim1Record: ${JSON.stringify(dns.dkim1Record)}`,
+        );
+        dnsRecords.push({
+          type: dns.dkim1Record.type as 'TXT' | 'CNAME',
+          host: dns.dkim1Record.host_name,
+          value: dns.dkim1Record.value,
+        });
+      }
+      if (dns?.dkim2Record) {
+        this.logger.log(
+          `Found dkim2Record: ${JSON.stringify(dns.dkim2Record)}`,
+        );
+        dnsRecords.push({
+          type: dns.dkim2Record.type as 'TXT' | 'CNAME',
+          host: dns.dkim2Record.host_name,
+          value: dns.dkim2Record.value,
+        });
+      }
+
+      // Handle legacy format: dkim_record (for older Brevo API versions)
+      if (dns?.dkim_record) {
+        this.logger.log(
+          `Found dkim_record (legacy): ${JSON.stringify(dns.dkim_record)}`,
+        );
+        dnsRecords.push({
+          type: dns.dkim_record.type as 'TXT' | 'CNAME',
+          host: dns.dkim_record.host_name,
+          value: dns.dkim_record.value,
+        });
+      }
+
+      // Handle brevo_code (TXT record)
+      if (dns?.brevo_code) {
+        this.logger.log(`Found brevo_code: ${JSON.stringify(dns.brevo_code)}`);
+        dnsRecords.push({
+          type: dns.brevo_code.type as 'TXT' | 'CNAME',
+          host: dns.brevo_code.host_name,
+          value: dns.brevo_code.value,
+        });
+      }
+
+      // Handle dmarc_record (TXT record)
+      if (dns?.dmarc_record) {
+        this.logger.log(
+          `Found dmarc_record: ${JSON.stringify(dns.dmarc_record)}`,
+        );
+        dnsRecords.push({
+          type: dns.dmarc_record.type as 'TXT' | 'CNAME',
+          host: dns.dmarc_record.host_name,
+          value: dns.dmarc_record.value,
+        });
+      }
+
+      if (dnsRecords.length === 0) {
+        this.logger.warn(
+          `No DNS records found in Brevo response for ${domainName}`,
+        );
+        this.logger.debug(
+          `Brevo response dns_records: ${JSON.stringify(brevoDomain.dns_records)}`,
+        );
+        return;
+      }
+
+      this.logger.log(
+        `Extracted ${dnsRecords.length} DNS records from Brevo: ${dnsRecords.map((r) => `${r.type}:${r.host}`).join(', ')}`,
+      );
+
+      // Find the existing Cloudflare zone
+      const zone = await this.cloudflareService.getZoneByName(domainName);
+
+      if (zone) {
+        await this.cloudflareService.createEmailDnsRecords(zone.id, dnsRecords);
+
+        // Update domain status
+        await this.repository.updateDomain(localDomainId, {
+          nameservers: zone.name_servers,
+          status: 'verifying',
+        });
+
+        this.logger.log(
+          `Brevo DNS records added to Cloudflare zone for ${domainName}`,
+        );
+
+        // Trigger immediate verification
+        try {
+          await this.brevoApi.authenticateDomain(apiKey, domainName);
+        } catch (authError: any) {
+          this.logger.warn(`Initial auth trigger failed: ${authError.message}`);
+        }
+      } else {
+        this.logger.warn(`No Cloudflare zone found for ${domainName}`);
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to add Brevo DNS to Cloudflare for ${domainName}: ${error.message}`,
+      );
+      // Don't fail, user can still do manual setup
+    }
+  }
+
+  /**
    * Get domain details
    */
   async getDomain(accountId: string, domainId: string) {
@@ -511,29 +879,43 @@ export class BrevoService {
   }
 
   /**
-   * Delete (archive) a domain
+   * Delete (archive) a domain and remove from Brevo
    */
-  async deleteDomain(accountId: string, domainId: string) {
-    const connection =
-      await this.repository.findConnectionByAccountId(accountId);
-    if (!connection) {
-      throw new NotFoundException('No Brevo connection found');
+  async deleteDomain(accountId: string, domainIdOrName: string) {
+    const { apiKey, connection } = await this.getApiKeyFromAccount(accountId);
+
+    // Try to find if it's a local domain ID (UUID)
+    let domainName = domainIdOrName;
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        domainIdOrName,
+      );
+
+    if (isUuid) {
+      const domain = await this.repository.findDomainById(domainIdOrName);
+      if (domain && domain.connectionId === connection.id) {
+        domainName = domain.domainName;
+        // Archive the domain (soft delete)
+        await this.repository.updateDomain(domain.id, {
+          isArchived: true,
+          archivedAt: new Date(),
+        });
+      }
     }
 
-    const domain = await this.repository.findDomainById(domainId);
-    if (!domain || domain.connectionId !== connection.id) {
-      throw new NotFoundException('Domain not found');
+    // Always try to delete from Brevo using the domain name
+    try {
+      await this.brevoApi.deleteDomain(apiKey, domainName);
+      this.logger.log(
+        `Domain ${domainName} deleted from Brevo for account ${accountId}`,
+      );
+    } catch (error: any) {
+      this.logger.warn(
+        `Failed to delete domain ${domainName} from Brevo: ${error.message}`,
+      );
+      // If we didn't find a local record and Brevo failed, then rethrow
+      if (!isUuid) throw error;
     }
-
-    // Archive the domain (soft delete)
-    await this.repository.updateDomain(domainId, {
-      isArchived: true,
-      archivedAt: new Date(),
-    });
-
-    this.logger.log(
-      `Domain ${domain.domainName} deleted for account ${accountId}`,
-    );
 
     return { message: 'Domain deleted successfully' };
   }
@@ -554,21 +936,30 @@ export class BrevoService {
 
     // Trigger authentication in Brevo
     try {
-      const result = await this.brevoApi.authenticateDomain(
+      // First trigger the authentication check
+      await this.brevoApi.authenticateDomain(apiKey, domain.domainName);
+
+      // Then fetch the latest domain status from Brevo
+      // The authenticate endpoint may not return the updated status immediately
+      const latestDomain = await this.brevoApi.getDomain(
         apiKey,
         domain.domainName,
       );
 
-      // Update with results
+      this.logger.log(
+        `Domain ${domain.domainName} verification result: authenticated=${latestDomain.authenticated}`,
+      );
+
+      // Update with results from the fresh domain fetch
       await this.repository.updateDomain(domainId, {
-        status: result.authenticated ? 'verified' : 'verifying',
-        dkimVerified: result.dns_records?.dkim_record?.status || false,
+        status: latestDomain.authenticated ? 'verified' : 'verifying',
+        dkimVerified: latestDomain.dns_records?.dkim_record?.status || false,
         lastCheckedAt: new Date(),
       });
 
       return {
-        verified: result.authenticated,
-        dkimVerified: result.dns_records?.dkim_record?.status || false,
+        verified: latestDomain.authenticated,
+        dkimVerified: latestDomain.dns_records?.dkim_record?.status || false,
       };
     } catch (error: any) {
       await this.repository.updateDomain(domainId, {
@@ -586,10 +977,14 @@ export class BrevoService {
   // =================
 
   /**
-   * List senders for a domain
+   * List senders for a domain (auto-syncs from Brevo first)
    */
   async listSenders(accountId: string, domainId: string) {
     const domain = await this.getDomain(accountId, domainId);
+
+    // Sync senders from Brevo API to local DB first
+    await this.syncSendersFromBrevo(accountId, domain.id);
+
     const senders = await this.repository.findSendersByDomainId(domain.id);
 
     return senders.map((s) => ({
@@ -605,9 +1000,89 @@ export class BrevoService {
   }
 
   /**
+   * Sync senders from Brevo API to local database
+   * Creates missing senders and updates isVerified based on active status from Brevo
+   */
+  async syncSendersFromBrevo(accountId: string, domainId: string) {
+    const { apiKey } = await this.getApiKeyFromAccount(accountId);
+    const domain = await this.repository.findDomainById(domainId);
+
+    if (!domain) return;
+
+    try {
+      // Fetch all senders from Brevo API
+      const { senders: brevoSenders } = await this.brevoApi.listSenders(apiKey);
+
+      // Filter to senders that belong to this domain
+      const domainSenders = brevoSenders.filter((s) =>
+        s.email.toLowerCase().endsWith(`@${domain.domainName.toLowerCase()}`),
+      );
+
+      this.logger.log(
+        `Syncing ${domainSenders.length} senders for domain ${domain.domainName}`,
+      );
+
+      for (const brevoSender of domainSenders) {
+        // Check if sender exists locally
+        const existingLocal = await this.repository.findSenderByEmail(
+          domainId,
+          brevoSender.email,
+        );
+
+        if (existingLocal) {
+          // Update isVerified based on Brevo's active status
+          const shouldBeVerified = brevoSender.active;
+          if (existingLocal.isVerified !== shouldBeVerified) {
+            this.logger.log(
+              `Updating sender ${brevoSender.email} isVerified: ${existingLocal.isVerified} -> ${shouldBeVerified}`,
+            );
+            await this.repository.updateSender(existingLocal.id, {
+              isVerified: shouldBeVerified,
+              brevoSenderId: String(brevoSender.id),
+            });
+          }
+        } else {
+          // Create new local sender record from Brevo
+          this.logger.log(
+            `Creating local record for Brevo sender: ${brevoSender.email} (active=${brevoSender.active})`,
+          );
+          const newSender = await this.repository.createSender({
+            domainId: domainId,
+            brevoSenderId: String(brevoSender.id),
+            email: brevoSender.email,
+            name: brevoSender.name,
+          });
+
+          // Update isVerified based on active status
+          if (brevoSender.active) {
+            await this.repository.updateSender(newSender.id, {
+              isVerified: true,
+            });
+          }
+        }
+      }
+    } catch (error: any) {
+      this.logger.warn(`Failed to sync senders from Brevo: ${error.message}`);
+      // Don't fail the list operation, just continue with local data
+    }
+  }
+
+  /**
    * Create sender (idempotent - returns existing if duplicate)
    */
-  async createSender(accountId: string, dto: CreateBrevoSenderDto) {
+  async createSender(
+    accountId: string,
+    userId: string,
+    dto: CreateBrevoSenderDto,
+  ) {
+    // Check if user is verified
+    const user = await this.usersRepository.findById(userId);
+    if (!user || !user.isVerified) {
+      throw new ForbiddenException(
+        'User verification required to create Brevo senders.',
+      );
+    }
+
     const { apiKey, connection } = await this.getApiKeyFromAccount(accountId);
 
     const domain = await this.repository.findDomainById(dto.domainId);
@@ -675,33 +1150,52 @@ export class BrevoService {
   }
 
   /**
-   * Delete (archive) a sender
+   * Delete (archive) a sender and remove from Brevo
    */
-  async deleteSender(accountId: string, senderId: string) {
-    const connection =
-      await this.repository.findConnectionByAccountId(accountId);
-    if (!connection) {
-      throw new NotFoundException('No Brevo connection found');
+  async deleteSender(accountId: string, senderIdOrBrevoId: string) {
+    const { apiKey, connection } = await this.getApiKeyFromAccount(accountId);
+
+    let brevoSenderId: number | null = null;
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        senderIdOrBrevoId,
+      );
+
+    if (isUuid) {
+      const sender = await this.repository.findSenderById(senderIdOrBrevoId);
+      if (sender) {
+        // Verify sender belongs to this account via domain
+        const domain = await this.repository.findDomainById(sender.domainId);
+        if (domain && domain.connectionId === connection.id) {
+          brevoSenderId = Number(sender.brevoSenderId);
+          // Archive the sender (soft delete)
+          await this.repository.updateSender(sender.id, {
+            isArchived: true,
+            archivedAt: new Date(),
+          });
+        }
+      }
+    } else {
+      // Treat as direct Brevo ID
+      brevoSenderId = Number(senderIdOrBrevoId);
     }
 
-    const sender = await this.repository.findSenderById(senderId);
-    if (!sender) {
-      throw new NotFoundException('Sender not found');
+    if (!brevoSenderId || isNaN(brevoSenderId)) {
+      throw new BadRequestException('Invalid sender identifier');
     }
 
-    // Verify sender belongs to this account via domain
-    const domain = await this.repository.findDomainById(sender.domainId);
-    if (!domain || domain.connectionId !== connection.id) {
-      throw new NotFoundException('Sender not found');
+    // Always try to delete from Brevo
+    try {
+      await this.brevoApi.deleteSender(apiKey, brevoSenderId);
+      this.logger.log(
+        `Sender ${brevoSenderId} deleted from Brevo for account ${accountId}`,
+      );
+    } catch (error: any) {
+      this.logger.warn(
+        `Failed to delete sender ${brevoSenderId} from Brevo: ${error.message}`,
+      );
+      if (!isUuid) throw error;
     }
-
-    // Archive the sender (soft delete)
-    await this.repository.updateSender(senderId, {
-      isArchived: true,
-      archivedAt: new Date(),
-    });
-
-    this.logger.log(`Sender ${sender.email} deleted for account ${accountId}`);
 
     return { message: 'Sender deleted successfully' };
   }

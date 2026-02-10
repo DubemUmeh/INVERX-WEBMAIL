@@ -42,3 +42,4 @@ next-env.d.ts
 
 # unused/unwated files(s)
 /app/simple/
+/app/settings/brevo/domains-and-senders-overviews.tsx

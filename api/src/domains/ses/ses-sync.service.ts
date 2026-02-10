@@ -47,21 +47,17 @@ export class SesSyncService {
       }
 
       // Update SES integration status if changed or just to refresh checkedAt
+      // NOTE: We ONLY update domain_ses.verificationStatus here.
+      // We do NOT touch domains.status - that represents domain lifecycle, not SES verification.
+      // This separation of concerns prevents Cloudflare and SES from overwriting each other.
       if (verificationStatus !== sesIntegration?.verificationStatus) {
         await this.domainsRepository.updateSesStatus(domainId, {
           verificationStatus,
           lastCheckedAt: new Date(),
         });
 
-        // If SES is verified, we can mark the domain as active overall
-        if (verificationStatus === 'verified' && domain.status !== 'active') {
-          await this.domainsRepository.update(domainId, {
-            status: 'active',
-          });
-        }
-
         this.logger.log(
-          `Synced domain ${domain.name} status to ${verificationStatus}`,
+          `Synced domain ${domain.name} SES status to ${verificationStatus}`,
         );
       }
 

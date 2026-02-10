@@ -9,6 +9,7 @@ import { SesEmailService } from './ses-email.service.js';
 import { DomainsService } from '../domains/domains.service.js';
 import { SmtpService } from '../smtp/smtp.service.js';
 import { SmtpEmailService } from '../smtp/smtp-email.service.js';
+import { BrevoService } from '../brevo/brevo.service.js';
 import {
   SendMailDto,
   CreateDraftDto,
@@ -26,6 +27,7 @@ export class MailService {
     private domainsService: DomainsService,
     private smtpService: SmtpService,
     private smtpEmailService: SmtpEmailService,
+    private brevoService: BrevoService,
   ) {}
 
   async getInbox(
@@ -134,6 +136,7 @@ export class MailService {
 
     try {
       let result: { messageId: string; success: boolean };
+      let method: 'smtp' | 'ses' | 'brevo';
 
       if (smtpConfig) {
         // 3a. Send via SMTP
@@ -160,42 +163,88 @@ export class MailService {
             replyTo: dto.replyTo,
           },
         );
+        method = 'smtp';
       } else {
-        // 3b. Validate sender email domain is verified for SES
-        const senderDomain = this.sesEmailService.extractDomain(fromEmail);
+        // 3b. Check if this belongs to a Brevo sender
+        const brevoStatus =
+          await this.brevoService.getConnectionStatus(accountId);
+        let isBrevoSender = false;
+        let brevoSenderName: string | undefined;
 
-        try {
-          const domain = await this.domainsService.getDomain(
-            accountId,
-            senderDomain,
+        if (brevoStatus.connected) {
+          const senders =
+            await this.brevoService.getBrevoAccountSenders(accountId);
+          const sender = senders.find(
+            (s) => s.email.toLowerCase() === fromEmail.toLowerCase(),
           );
-
-          if (domain.ses?.verificationStatus !== 'verified') {
-            throw new BadRequestException(
-              `Cannot send from ${fromEmail}. The domain ${senderDomain} is not verified. Please verify your domain first.`,
-            );
+          if (sender && sender.active) {
+            isBrevoSender = true;
+            brevoSenderName = sender.name;
           }
-        } catch (error: any) {
-          if (error instanceof NotFoundException) {
-            throw new BadRequestException(
-              `Cannot send from ${fromEmail}. The domain ${senderDomain} is not registered in your account. Please add and verify the domain first, or configure SMTP for this address.`,
-            );
-          }
-          throw error;
         }
 
-        // Send via AWS SES
-        this.logger.log(`Sending email via AWS SES for ${fromEmail}`);
-        result = await this.sesEmailService.sendEmail({
-          from: fromEmail,
-          to: dto.to,
-          cc: dto.cc,
-          bcc: dto.bcc,
-          subject: dto.subject,
-          bodyText: dto.bodyText,
-          bodyHtml: dto.bodyHtml,
-          replyTo: dto.replyTo,
-        });
+        if (isBrevoSender) {
+          // Send via Brevo
+          this.logger.log(`Sending email via Brevo for ${fromEmail}`);
+          // Brevo service sendEmailWithBrevoSender takes a single string for 'to'
+          // We loop for multiple recipients as identified in frontend code analysis
+          const sendResults = await Promise.all(
+            dto.to.map((to) =>
+              this.brevoService.sendEmailWithBrevoSender(accountId, {
+                senderEmail: fromEmail,
+                senderName: brevoSenderName,
+                to: to,
+                subject: dto.subject,
+                htmlContent: dto.bodyHtml || '',
+                textContent: dto.bodyText,
+              }),
+            ),
+          );
+
+          // Use the first results messageId as reference
+          result = {
+            messageId: sendResults[0].messageId,
+            success: true,
+          };
+          method = 'brevo';
+        } else {
+          // 3c. Validate sender email domain is verified for SES
+          const senderDomain = this.sesEmailService.extractDomain(fromEmail);
+
+          try {
+            const domain = await this.domainsService.getDomain(
+              accountId,
+              senderDomain,
+            );
+
+            if (domain.ses?.verificationStatus !== 'verified') {
+              throw new BadRequestException(
+                `Cannot send from ${fromEmail}. The domain ${senderDomain} is not verified. Please verify your domain first.`,
+              );
+            }
+          } catch (error: any) {
+            if (error instanceof NotFoundException) {
+              throw new BadRequestException(
+                `Cannot send from ${fromEmail}. The domain ${senderDomain} is not registered in your account. Please add and verify the domain first, or configure SMTP for this address.`,
+              );
+            }
+            throw error;
+          }
+
+          // Send via AWS SES
+          this.logger.log(`Sending email via AWS SES for ${fromEmail}`);
+          result = await this.sesEmailService.sendEmail({
+            from: fromEmail,
+            to: dto.to,
+            cc: dto.cc,
+            bcc: dto.bcc,
+            subject: dto.subject,
+            bodyText: dto.bodyText,
+            bodyHtml: dto.bodyHtml,
+            replyTo: dto.replyTo,
+          });
+          method = 'ses';
+        }
       }
 
       // Update message with message ID
@@ -213,7 +262,7 @@ export class MailService {
       return {
         id: message.id,
         messageId: result.messageId,
-        method: smtpConfig ? 'smtp' : 'ses',
+        method,
         message: 'Email sent successfully',
       };
     } catch (error: any) {

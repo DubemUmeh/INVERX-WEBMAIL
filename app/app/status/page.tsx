@@ -1,6 +1,13 @@
 import React from "react";
 import Link from "next/link";
 import { Check, CheckCircle, Bell, ArrowLeft, ArrowRight, AlertTriangle, Activity } from "lucide-react";
+import { constructMetadata } from "@/lib/seo";
+
+export const metadata = constructMetadata({
+  title: "System Status",
+  description: "Real-time performance and reliability updates for all INVERX services.",
+});
+
 
 export default function StatusPage() {
   return (

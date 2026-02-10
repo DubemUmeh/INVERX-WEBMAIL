@@ -71,10 +71,6 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
     );
   }
 
-  const domainName = domains[0].name;
-  const domainId = domains[0].id;
-  console.log('name and Id of domain: ', { domainName, domainId });
-
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-white min-h-screen text-base">
       <div className="max-w-6xl mx-auto px-6 py-10">
@@ -141,14 +137,26 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
                       <ExternalLink size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-text-secondary" />
                     </h3>
                     <div className="flex items-center gap-3 mt-1.5">
-                       {domain.status === 'active' && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400">
-                          <CheckCircle size={12} fill="currentColor" className="text-emerald-400/20" /> Active
+                       {/* Cloudflare-managed domains */}
+                       {domain.cloudflare?.mode === 'managed' && domain.cloudflare?.status === 'active' && (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400">
+                          <CheckCircle size={12} fill="currentColor" className="text-blue-400/20" /> DNS Ready
                         </span>
                       )}
-                      {domain.status === 'pending' && (
+                       {domain.cloudflare?.mode === 'managed' && domain.cloudflare?.status !== 'active' && (
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400">
-                          <AlertTriangle size={12} className="text-amber-400" /> Verification Pending
+                          <AlertTriangle size={12} className="text-amber-400" /> Pending DNS
+                        </span>
+                      )}
+                      {/* AWS/Manual domains without Cloudflare */}
+                      {!domain.cloudflare && domain.ses?.verificationStatus === 'verified' && (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                          <CheckCircle size={12} fill="currentColor" className="text-emerald-400/20" /> Email Ready
+                        </span>
+                      )}
+                      {!domain.cloudflare && domain.ses?.verificationStatus !== 'verified' && (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400">
+                          <AlertTriangle size={12} className="text-amber-400" /> Pending Verification
                         </span>
                       )}
                       {domain.status === 'failed' && (
@@ -156,8 +164,13 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
                           <AlertTriangle size={12} className="text-red-400" /> Configuration Error
                         </span>
                       )}
-                      {/* TODO: Add real verification date */}
-                      <span className="text-text-secondary text-xs">• Verified recently</span>
+                      {/* Cloudflare badge */}
+                      {domain.cloudflare?.mode === 'managed' && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-400">
+                          <span className="size-1.5 bg-orange-400 rounded-full" /> Cloudflare
+                        </span>
+                      )}
+                      <span className="text-text-secondary text-xs">• Added {domain.createdAt ? new Date(domain.createdAt).toLocaleDateString() : 'recently'}</span>
                     </div>
                   </div>
                 </div>
@@ -212,7 +225,7 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
                                 <AlertDialogDescription asChild>
                                   <div>
                                     <span>
-                                      Are you sure you want to remove <span className="font-medium text-white">{domainName}</span>? This will:
+                                      Are you sure you want to remove <span className="font-medium text-white">{domain.name}</span>? This will:
                                       <ul className="list-disc list-inside mt-2 space-y-1">
                                         <li>Stop all email delivery for this domain</li>
                                         <li>Delete all associated email addresses</li>
@@ -228,10 +241,11 @@ export default function DomainsPage({ headerPrefix }: { headerPrefix?: React.Rea
                                 <AlertDialogAction 
                                   className="bg-red-600 hover:bg-red-700 text-white"
                                   onClick={() => {
-                                    domainsApi.delete(domainId)
+                                    domainsApi.delete(domain.id)
                                       .then(() => {
                                         toast.success('Domain removed successfully');
-                                        window.location.href = '/domains';
+                                        // Refresh the list instead of reloading
+                                        setDomains(domains.filter(d => d.id !== domain.id));
                                       })
                                       .catch(() => toast.error('Failed to remove domain'));
                                   }}

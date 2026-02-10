@@ -56,7 +56,7 @@ export default function NotFound() {
       category: "System",
       links: [
         { href: "/status", label: "Status", icon: Server, desc: "System Health" },
-        { href: "/configuration", label: "Config", icon: Settings, desc: "Global Settings" },
+        { href: "/smtp", label: "Config", icon: Settings, desc: "Global Settings" },
         { href: "/access-control", label: "Access", icon: Shield, desc: "Permissions" },
         { href: "/", label: "Home", icon: Home, desc: "Landing Page" },
       ]

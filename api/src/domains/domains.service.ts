@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { DomainsRepository } from './domains.repository.js';
 import { DomainVerificationService } from './domain-verification.service.js';
@@ -15,6 +16,7 @@ import {
 } from './dto/index.js';
 
 import { CloudflareService } from '../cloudflare/cloudflare.service.js';
+import { UsersRepository } from '../users/users.repository.js';
 
 @Injectable()
 export class DomainsService {
@@ -24,6 +26,7 @@ export class DomainsService {
     private sesVerificationService: SesVerificationService,
     private sesSyncService: SesSyncService,
     private cloudflareService: CloudflareService,
+    private usersRepository: UsersRepository,
   ) {}
 
   async getDomains(accountId: string, query: DomainQueryDto) {
@@ -48,7 +51,15 @@ export class DomainsService {
     return domain;
   }
 
-  async createDomain(accountId: string, dto: CreateDomainDto) {
+  async createDomain(accountId: string, userId: string, dto: CreateDomainDto) {
+    // Check if user is verified
+    const user = await this.usersRepository.findById(userId);
+    if (!user || !user.isVerified) {
+      throw new ForbiddenException(
+        'User verification required to add domains.',
+      );
+    }
+
     const domainName = dto.name.toLowerCase().trim();
 
     if (!this.isValidDomainName(domainName)) {
@@ -327,7 +338,8 @@ export class DomainsService {
     const response = {
       domainId: domain.id,
       domain: domain.name,
-      verified: syncResult?.verified || false,
+      // verified: syncResult?.verified || false,
+      verified: syncResult?.verified || cloudflareStatus === 'active',
       status: syncResult?.status, // SES verification status
       cloudflareStatus, // Return Cloudflare status
       nameservers,
@@ -382,9 +394,11 @@ export class DomainsService {
     // 2. Sync with AWS SES
     const syncResult = await this.sesSyncService.syncDomainStatus(domain.id);
 
-    // 3. Update local DB if verification passed
+    // 3. Update SES integration if DNS verification passed
+    // NOTE: We only update domain_ses fields here, NOT domains.status
+    // domains.status is for domain lifecycle, not verification state
     if (dnsStatus.overallValid) {
-      // DNS is valid - mark integration as verified
+      // DNS is valid - update SES integration with verification details
       await this.domainsRepository.updateSesStatus(domain.id, {
         spfVerified: dnsStatus.spf.valid,
         dkimVerified: dnsStatus.dkim.valid,
@@ -393,12 +407,7 @@ export class DomainsService {
         lastCheckedAt: new Date(),
       });
 
-      // And mark domain as active
-      await this.domainsRepository.update(domain.id, {
-        status: 'active',
-      });
-
-      // Also update all DNS records to active
+      // Update DNS records status (this is about record status, not domain lifecycle)
       await this.domainsRepository.updateDnsRecordsStatus(domain.id, 'active');
     }
 
@@ -576,5 +585,37 @@ export class DomainsService {
     const domainRegex =
       /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
     return domainRegex.test(domain);
+  }
+
+  /**
+   * Computed verification helpers following "compute, don't store" principle.
+   * These methods dynamically determine if a domain is ready for specific operations.
+   *
+   * IMPORTANT: domains.status = domain lifecycle (pending/active/failed/expired)
+   *            Provider verification = provider-specific tables
+   */
+
+  /**
+   * Is DNS management ready? (Cloudflare zone is active)
+   */
+  isDnsManaged(domain: any): boolean {
+    return domain.cloudflare?.status === 'active';
+  }
+
+  /**
+   * Can send email via SES?
+   */
+  canSendViaSes(domain: any): boolean {
+    return domain.ses?.verificationStatus === 'verified';
+  }
+
+  /**
+   * Is domain ready for email operations? (any provider verified)
+   * Use this for generic "is verified?" checks
+   */
+  isReadyForEmail(domain: any): boolean {
+    // Domain can send email if SES is verified
+    // (Brevo has its own domain system, checked via brevo_domains table)
+    return this.canSendViaSes(domain);
   }
 }

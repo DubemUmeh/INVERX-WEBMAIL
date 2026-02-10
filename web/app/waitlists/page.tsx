@@ -27,7 +27,7 @@ export default function WaitlistPage() {
   }
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+    <main className="relative min-h-screen flex flex-col items-center justify-center py-20 px-4 sm:p-6 overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       
       {/* Background Gradients */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px] pointer-events-none opacity-40 dark:opacity-20 mix-blend-multiply dark:mix-blend-screen animate-pulse-slow"></div>

@@ -4,7 +4,7 @@ import Link from 'next/link';
 export default function SecurityHero() {
   return (
     <section
-      className="w-full px-4 py-16 max-w-[960px] flex flex-col items-center text-center gap-8 relative overflow-hidden">
+      className="w-full px-4 pt-20 py-16 max-w-[960px] flex flex-col items-center text-center gap-8 relative overflow-hidden">
       {/* <!-- Background Decoration --> */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-linear-to-tr from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-full blur-[100px] -z-10">
       </div>

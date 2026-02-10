@@ -1,8 +1,15 @@
 import { MessageCircle, BookOpenCheck, Users, ChevronDown, Send } from "lucide-react"
+import { constructMetadata } from "@/lib/seo"
+
+export const metadata = constructMetadata({
+  title: "Contact Us | INVERX",
+  description: "Have a question about INVERX? Our team is here to help with sales, support, and partnership inquiries.",
+  canonicalUrl: "https://inverx.pro/contact",
+})
 
 export default function Contact() {
   return (
-    <main className="grow w-full px-5 md:px-10 py-12 md:py-20 flex justify-center bg-background/50">
+    <main className="grow w-full px-5 md:px-10 py-20 flex justify-center bg-muted">
       <div className="w-full max-w-[1024px] flex flex-col">
         {/* <!-- Hero Section --> */}
         <div className="mb-12 md:mb-16">

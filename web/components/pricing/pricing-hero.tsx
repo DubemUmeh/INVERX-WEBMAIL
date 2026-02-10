@@ -7,7 +7,7 @@ export default function PricingHero() {
   const [billing, setBilling] = useState('monthly')
 
   return (
-    <section className="py-16 sm:py-24 px-4">
+    <section className="pt-20 pb-16 sm:py-24 px-4">
       <div className="mx-auto max-w-4xl text-center flex flex-col items-center gap-6">
         <h1
           className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-900 dark:text-white leading-tight">

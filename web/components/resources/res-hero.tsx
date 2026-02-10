@@ -2,7 +2,7 @@ import Link from "next/link"
 
 export default function ResHero() {
   return (
-    <div className="@container w-full py-16">
+    <div className="@container w-full pt-20 py-16">
       <div className="@[480px]:px-4">
         <div
           className="flex min-h-[360px] flex-col gap-6 bg-cover bg-center bg-no-repeat @[480px]:gap-8 @[480px]:rounded-xl items-center justify-center p-8 relative overflow-hidden"

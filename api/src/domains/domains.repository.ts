@@ -21,13 +21,38 @@ export class DomainsRepository {
     const { page = 1, limit = 20 } = options;
     const offset = (page - 1) * limit;
 
-    return this.db
-      .select()
+    const results = await this.db
+      .select({
+        ...getTableColumns(domains),
+        cloudflare: {
+          zoneId: domainCloudflare.zoneId,
+          mode: domainCloudflare.mode,
+          status: domainCloudflare.status,
+          lastSyncedAt: domainCloudflare.lastSyncedAt,
+          nameservers: domainCloudflare.nameservers,
+        },
+        ses: {
+          verificationStatus: domainSes.verificationStatus,
+          dkimVerified: domainSes.dkimVerified,
+          spfVerified: domainSes.spfVerified,
+          dmarcVerified: domainSes.dmarcVerified,
+          lastCheckedAt: domainSes.lastCheckedAt,
+        },
+      })
       .from(domains)
+      .leftJoin(domainCloudflare, eq(domains.id, domainCloudflare.domainId))
+      .leftJoin(domainSes, eq(domains.id, domainSes.domainId))
       .where(eq(domains.accountId, accountId))
       .orderBy(desc(domains.createdAt))
       .limit(limit)
       .offset(offset);
+
+    // Clean up null cloudflare/ses objects
+    return results.map((row) => ({
+      ...row,
+      cloudflare: row.cloudflare?.zoneId ? row.cloudflare : undefined,
+      ses: row.ses?.verificationStatus ? row.ses : undefined,
+    }));
   }
 
   async findById(accountId: string, domainId: string) {

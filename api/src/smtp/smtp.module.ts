@@ -12,9 +12,10 @@ import { SmtpCryptoService } from './smtp-crypto.service.js';
 import { SmtpEmailService } from './smtp-email.service.js';
 
 import { DomainsModule } from '../domains/domains.module.js';
+import { UsersModule } from '../users/users.module.js';
 
 @Module({
-  imports: [DomainsModule],
+  imports: [DomainsModule, UsersModule],
   controllers: [SmtpController],
   providers: [SmtpService, SmtpRepository, SmtpCryptoService, SmtpEmailService],
   exports: [SmtpService, SmtpEmailService, SmtpCryptoService],

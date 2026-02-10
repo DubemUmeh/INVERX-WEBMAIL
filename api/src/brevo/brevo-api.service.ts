@@ -14,6 +14,21 @@ export interface BrevoAccountInfo {
   firstName?: string;
   lastName?: string;
   companyName?: string;
+  plan?: {
+    type: string;
+    credits: number;
+    creditsType: string;
+  }[];
+}
+
+export interface BrevoSmtpStats {
+  requests: number;
+  delivered: number;
+  hardBounces: number;
+  softBounces: number;
+  blocked: number;
+  spamReports: number;
+  invalid: number;
 }
 
 export interface BrevoDomainDnsRecord {
@@ -119,6 +134,19 @@ export class BrevoApiService {
   }
 
   /**
+   * Get SMTP sending statistics for today
+   */
+  async getSmtpStatistics(apiKey: string): Promise<BrevoSmtpStats> {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    return this.request<BrevoSmtpStats>(
+      apiKey,
+      'GET',
+      `/smtp/statistics/aggregatedReport?startDate=${today}&endDate=${today}`,
+    );
+  }
+
+  /**
    * Create a domain in Brevo
    */
   async createDomain(
@@ -201,6 +229,24 @@ export class BrevoApiService {
       'GET',
       '/senders',
     );
+  }
+
+  /**
+   * Delete a domain from Brevo
+   */
+  async deleteDomain(apiKey: string, domainName: string): Promise<void> {
+    await this.request(
+      apiKey,
+      'DELETE',
+      `/senders/domains/${encodeURIComponent(domainName)}`,
+    );
+  }
+
+  /**
+   * Delete a sender email from Brevo
+   */
+  async deleteSender(apiKey: string, senderId: number): Promise<void> {
+    await this.request(apiKey, 'DELETE', `/senders/${senderId}`);
   }
 
   /**

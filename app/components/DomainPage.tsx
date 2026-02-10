@@ -461,13 +461,26 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                         )}
                         <span className="text-text-secondary text-sm flex items-center gap-1.5 ml-1">
                           <span className="opacity-50">•</span>
-                          <span className="opacity-70">Verification Status:</span>
-                          {domain.ses?.verificationStatus === 'verified' ? (
-                            <span className="text-emerald-400 font-medium">Email Ready</span>
-                          ) : domain.cloudflare?.status === 'active' ? (
-                            <span className="text-blue-400 font-medium">DNS Verified (Syncing)</span>
+                          <span className="opacity-70">Status:</span>
+                          {/* Granular status display based on provider */}
+                          {domain.cloudflare?.mode === 'managed' ? (
+                            // Cloudflare-managed domain: show DNS status
+                            domain.cloudflare?.status === 'active' ? (
+                              <span className="text-blue-400 font-medium">DNS Ready</span>
+                            ) : domain.cloudflare?.status === 'moved' ? (
+                              <span className="text-amber-400 font-medium">Awaiting Nameservers</span>
+                            ) : (
+                              <span className="text-amber-400 font-medium">Pending DNS</span>
+                            )
                           ) : (
-                            <span className="text-amber-400 font-medium">Pending</span>
+                            // AWS/Manual domain: show SES verification status
+                            domain.ses?.verificationStatus === 'verified' ? (
+                              <span className="text-emerald-400 font-medium">Email Ready</span>
+                            ) : domain.ses?.verificationStatus === 'pending' ? (
+                              <span className="text-amber-400 font-medium">Pending Verification</span>
+                            ) : (
+                              <span className="text-amber-400 font-medium">Not Verified</span>
+                            )
                           )}
                         </span>
                       </div>
@@ -530,8 +543,16 @@ export default function DomainManagementPage({ showSidebar = true, domainId }: D
                           </div>
                           <h3 className="font-bold text-white">Domain Status</h3>
                         </div>
-                        <p className="text-3xl font-bold text-white mb-1">Active</p>
-                        <p className="text-sm text-text-secondary">Next verified check in 24h</p>
+                        <p className="text-3xl font-bold text-white mb-1">
+                          {domain.cloudflare?.mode === 'managed' ? (
+                            domain.cloudflare?.status === 'active' ? "DNS Ready" : "Pending"
+                          ) : (
+                            domain.ses?.verificationStatus === 'verified' ? "Email Ready" : "Pending"
+                          )}
+                        </p>
+                        <p className="text-sm text-text-secondary">
+                          {domain.cloudflare?.mode === 'managed' ? "Cloudflare DNS Active" : "AWS SES Verification"}
+                        </p>
                       </div>
                       <div className="bg-surface-dark border border-surface-border p-5 rounded-xl">
                           <div className="flex items-center gap-3 mb-2">

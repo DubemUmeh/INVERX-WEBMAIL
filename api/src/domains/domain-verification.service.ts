@@ -122,11 +122,6 @@ export class DomainVerificationService {
       lastCheckedAt: status.checkedAt,
     });
 
-    // Update core domain status
-    await this.domainsRepository.update(domainId, {
-      status: status.overallValid ? 'active' : 'pending',
-    });
-
     return status;
   }
 

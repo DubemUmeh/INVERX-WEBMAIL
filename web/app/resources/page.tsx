@@ -3,6 +3,13 @@ import MainTopic from "@/components/resources/main-topic";
 import Migration from "@/components/resources/migration";
 import ResHero from "@/components/resources/res-hero";
 import SupportCTA from "@/components/resources/support-cta";
+import { constructMetadata } from "@/lib/seo";
+
+export const metadata = constructMetadata({
+  title: "Resources & Documentation | INVERX",
+  description: "Explore guides, developer documentation, and migration resources to get the most out of INVERX.",
+  canonicalUrl: "https://inverx.pro/resources",
+});
 
 export default function Page() {
   return (

@@ -48,7 +48,7 @@ export default function Page() {
   };
 
   return (
-    <main className="flex min-h-screen w-full bg-neutral-950 text-white">
+    <main className="flex min-h-screen w-full bg-neutral-950 text-white pt-20">
       {/* Left Side (Visual) */}
       <div className="hidden lg:flex relative w-1/2 flex-col justify-between overflow-hidden bg-neutral-900 border-r border-neutral-800 p-12">
         {/* Background Gradients */}
@@ -58,13 +58,13 @@ export default function Page() {
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-10">
               {/* Logo Placeholder - You might want to replace this with your actual logo component */}
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-white to-neutral-400"></div>
+              <div className="h-8 w-8 rounded-lg bg-linear-to-br from-white to-neutral-400"></div>
               <span className="text-xl font-bold tracking-tight">Inverx</span>
           </div>
 
           <h1 className="text-5xl font-bold leading-[1.1] tracking-tight mb-6">
             Sync, managed <br /> 
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-200 to-neutral-500">
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-neutral-200 to-neutral-500">
              and delivered.
             </span>
           </h1>
@@ -104,7 +104,7 @@ export default function Page() {
       {/* Right Side (Form) */}
       <div className="flex w-full lg:w-1/2 flex-col items-center justify-center p-8 bg-neutral-950 relative overflow-hidden">
         {/* Subtle grid pattern for the form side too */}
-        <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-size-[24px_24px]"></div>
 
         <div className="relative z-10 w-full max-w-[420px] animate-in fade-in slide-in-from-right-8 duration-700">
           <div className="mb-8">

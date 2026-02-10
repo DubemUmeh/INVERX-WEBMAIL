@@ -1,10 +1,13 @@
 import { cookies } from "next/headers"
+import { constructMetadata } from "@/lib/seo"
 
-
-import { Mail } from "../components/mail"
-import { accounts } from "../data"
+export const metadata = constructMetadata({
+  title: "Archive",
+  description: "View your archived email conversations.",
+})
 
 export default async function MailArchivePage() {
+
   const layout = (await cookies()).get("react-resizable-panels:layout:mail")
   const collapsed = (await cookies()).get("react-resizable-panels:collapsed")
 

@@ -36,9 +36,10 @@ export class DomainsController {
   @Roles('owner', 'admin')
   createDomain(
     @CurrentUser('accountId') accountId: string,
+    @CurrentUser('sub') userId: string,
     @Body() dto: CreateDomainDto,
   ) {
-    return this.domainsService.createDomain(accountId, dto);
+    return this.domainsService.createDomain(accountId, userId, dto);
   }
 
   // All addresses for account (must be before :id to avoid route conflict)

@@ -45,7 +45,7 @@ export default function Page() {
   return (
     <main>
       <section
-        className="bg-white dark:bg-neutral-900 border-b border-[#ededed] dark:border-neutral-800 pt-16 pb-12 px-4 sm:px-6 lg:px-8">
+        className="bg-white dark:bg-neutral-900 border-b border-[#ededed] dark:border-neutral-800 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl font-black tracking-tight text-primary dark:text-white mb-4">Privacy Policy
