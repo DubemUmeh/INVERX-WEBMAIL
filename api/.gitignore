@@ -58,3 +58,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # script files
 scripts/
+
+# unused
+src/routes/
