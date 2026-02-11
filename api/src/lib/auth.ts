@@ -19,7 +19,7 @@ export const auth = betterAuth({
     database: {
       generateId: () => uuidv7(),
     },
-    cookieOptions: {
+    defaultCookieAttributes: {
       domain: '.inverx.pro', // Share cookies across subdomains
       sameSite: 'lax',
       secure: true, // HTTPS only
