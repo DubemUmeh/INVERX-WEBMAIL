@@ -5,8 +5,6 @@ import { db } from '../database/drizzle.js';
 import * as schema from '../database/schema/index.js';
 import { uuidv7 } from 'uuidv7';
 
-const { APP_URL, WEB_URL } = process.env;
-
 export const auth = betterAuth({
   advanced: {
     database: {
@@ -74,5 +72,5 @@ export const auth = betterAuth({
   },
   trustedOrigins: process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
-    : [`${WEB_URL}`, `${APP_URL}`],
+    : ([process.env.WEB_URL, process.env.APP_URL].filter(Boolean) as string[]),
 });

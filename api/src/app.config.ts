@@ -2,11 +2,9 @@ import { SanitizationPipe } from './common/pipes/sanitization.pipe.js';
 import { INestApplication } from '@nestjs/common';
 
 export async function configureApp(app: INestApplication) {
-  const { APP_URL, WEB_URL, CORS_ORIGIN } = process.env;
-
-  const origins = CORS_ORIGIN
-    ? CORS_ORIGIN.split(',').map((url) => url.trim())
-    : [WEB_URL, APP_URL];
+  const origins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
+    : ([process.env.WEB_URL, process.env.APP_URL].filter(Boolean) as string[]);
 
   // Enable CORS
   app.enableCors({
