@@ -1,7 +1,9 @@
 import { NextResponse, NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
-  const sessionToken = request.cookies.get("better-auth.session_token")?.value;
+  const sessionToken =
+    request.cookies.get("better-auth.session_token")?.value ||
+    request.cookies.get("__Secure-better-auth.session_token")?.value;
 
   if (!sessionToken) {
     const authOrigin = process.env.AUTH_APP_ORIGIN;
