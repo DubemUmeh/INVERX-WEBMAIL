@@ -5,7 +5,16 @@ import { db } from '../database/drizzle.js';
 import * as schema from '../database/schema/index.js';
 import { uuidv7 } from 'uuidv7';
 
+const trustedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
+  : ([process.env.WEB_URL, process.env.APP_URL].filter(Boolean) as string[]);
+
+console.log('[Better Auth Init] baseURL:', process.env.BETTER_AUTH_URL);
+console.log('[Better Auth Init] trustedOrigins:', trustedOrigins);
+console.log('[Better Auth Init] CORS_ORIGIN env:', process.env.CORS_ORIGIN);
+
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL,
   advanced: {
     database: {
       generateId: () => uuidv7(),
@@ -70,7 +79,5 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins: process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
-    : ([process.env.WEB_URL, process.env.APP_URL].filter(Boolean) as string[]),
+  trustedOrigins,
 });
