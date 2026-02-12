@@ -560,7 +560,7 @@ export default function BrevoSettingsPage() {
                   )}
                 </Tooltip>
               </TooltipProvider>
-              <Dialog>
+              <Dialog open={connectDialogOpen} onOpenChange={setConnectDialogOpen}>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Connect Brevo</DialogTitle>

@@ -98,7 +98,7 @@ export default function Page() {
       await signOut({
         fetchOptions: {
           onSuccess: () => {
-            window.location.href = `${process.env.AUTH_APP_ORIGIN}login/`;
+            window.location.href = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
           },
         },
       });
