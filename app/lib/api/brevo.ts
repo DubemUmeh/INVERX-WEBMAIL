@@ -115,7 +115,7 @@ export interface BrevoAccountDomain {
     dkim1Record?: BrevoAccountDomainDnsRecord | null;
     dkim2Record?: BrevoAccountDomainDnsRecord | null;
     brevoCode?: BrevoAccountDomainDnsRecord | null;
-    dmarc_record?: BrevoAccountDomainDnsRecord | null;
+    dmarc_record?: BrevoAccountDomainDnsRecord | null; // Note: underscore from backend
   } | null;
 }
 

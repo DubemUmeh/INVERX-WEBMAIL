@@ -239,90 +239,26 @@ export class BrevoService {
               id: d.id, // Use ID from list to result
               domainName: d.domain_name, // Use domain_name from list result (confirmed by logs)
               authenticated: details.authenticated,
-              dnsRecords: (() => {
-                const records = details.dns_records;
-
-                // Handle array format (New Brevo API / Stored DB format)
-                if (Array.isArray(records)) {
-                  const dkim1 = records.find(
-                    (r: any) =>
-                      r.host?.includes('brevo1') && r.purpose === 'dkim',
-                  );
-                  const dkim2 = records.find(
-                    (r: any) =>
-                      r.host?.includes('brevo2') && r.purpose === 'dkim',
-                  );
-                  const brevoCode = records.find(
-                    (r: any) => r.purpose === 'brevo-code',
-                  );
-                  const dmarc = records.find(
-                    (r: any) => r.purpose === 'dmarc' || r.host === '_dmarc',
-                  );
-
-                  return {
-                    dkim1Record: dkim1
+              dnsRecords: details.dns_records
+                ? {
+                    dkimRecord: details.dns_records.dkim_record
                       ? {
-                          type: dkim1.type,
-                          host: dkim1.host,
-                          value: dkim1.value,
-                          verified: dkim1.verified ?? dkim1.status, // Handle both status/verified
+                          type: details.dns_records.dkim_record.type,
+                          host: details.dns_records.dkim_record.host_name,
+                          value: details.dns_records.dkim_record.value,
+                          verified: details.dns_records.dkim_record.status,
                         }
                       : null,
-                    dkim2Record: dkim2
+                    brevoCode: details.dns_records.brevo_code
                       ? {
-                          type: dkim2.type,
-                          host: dkim2.host,
-                          value: dkim2.value,
-                          verified: dkim2.verified ?? dkim2.status,
+                          type: details.dns_records.brevo_code.type,
+                          host: details.dns_records.brevo_code.host_name,
+                          value: details.dns_records.brevo_code.value,
+                          verified: details.dns_records.brevo_code.status,
                         }
                       : null,
-                    brevoCode: brevoCode
-                      ? {
-                          type: brevoCode.type,
-                          host: brevoCode.host,
-                          value: brevoCode.value,
-                          verified: brevoCode.verified ?? brevoCode.status,
-                        }
-                      : null,
-                    dmarc_record: dmarc
-                      ? {
-                          type: dmarc.type,
-                          host: dmarc.host,
-                          value: dmarc.value,
-                          verified: dmarc.verified ?? dmarc.status,
-                        }
-                      : null,
-                    dkimRecord: null, // Legacy field
-                  };
-                }
-
-                // Handle legacy object format (fallback)
-                if (records && typeof records === 'object') {
-                  return {
-                    dkimRecord: records.dkim_record
-                      ? {
-                          type: records.dkim_record.type,
-                          host: records.dkim_record.host_name,
-                          value: records.dkim_record.value,
-                          verified: records.dkim_record.status,
-                        }
-                      : null,
-                    brevoCode: records.brevo_code
-                      ? {
-                          type: records.brevo_code.type,
-                          host: records.brevo_code.host_name,
-                          value: records.brevo_code.value,
-                          verified: records.brevo_code.status,
-                        }
-                      : null,
-                    dkim1Record: null,
-                    dkim2Record: null,
-                    dmarc_record: null,
-                  };
-                }
-
-                return null;
-              })(),
+                  }
+                : null,
             };
           } catch (detailError: any) {
             this.logger.warn(
