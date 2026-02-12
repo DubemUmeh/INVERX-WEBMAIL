@@ -249,12 +249,36 @@ export class BrevoService {
                           verified: details.dns_records.dkim_record.status,
                         }
                       : null,
+                    dkim1Record: details.dns_records.dkim1Record
+                      ? {
+                          type: details.dns_records.dkim1Record.type,
+                          host: details.dns_records.dkim1Record.host_name,
+                          value: details.dns_records.dkim1Record.value,
+                          verified: details.dns_records.dkim1Record.status,
+                        }
+                      : null,
+                    dkim2Record: details.dns_records.dkim2Record
+                      ? {
+                          type: details.dns_records.dkim2Record.type,
+                          host: details.dns_records.dkim2Record.host_name,
+                          value: details.dns_records.dkim2Record.value,
+                          verified: details.dns_records.dkim2Record.status,
+                        }
+                      : null,
                     brevoCode: details.dns_records.brevo_code
                       ? {
                           type: details.dns_records.brevo_code.type,
                           host: details.dns_records.brevo_code.host_name,
                           value: details.dns_records.brevo_code.value,
                           verified: details.dns_records.brevo_code.status,
+                        }
+                      : null,
+                    dmarc_record: details.dns_records.dmarc_record
+                      ? {
+                          type: details.dns_records.dmarc_record.type,
+                          host: details.dns_records.dmarc_record.host_name,
+                          value: details.dns_records.dmarc_record.value,
+                          verified: details.dns_records.dmarc_record.status,
                         }
                       : null,
                   }

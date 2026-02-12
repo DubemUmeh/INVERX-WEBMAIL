@@ -43,8 +43,11 @@ export interface BrevoDomainResponse {
   domain_name: string;
   authenticated: boolean;
   dns_records?: {
-    dkim_record?: BrevoDomainDnsRecord;
+    dkim_record?: BrevoDomainDnsRecord; // Legacy format
+    dkim1Record?: BrevoDomainDnsRecord; // New format - first DKIM
+    dkim2Record?: BrevoDomainDnsRecord; // New format - second DKIM
     brevo_code?: BrevoDomainDnsRecord;
+    dmarc_record?: BrevoDomainDnsRecord;
   };
 }
 
