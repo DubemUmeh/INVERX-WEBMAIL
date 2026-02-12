@@ -611,9 +611,9 @@ export default function BrevoSettingsPage() {
           </CardHeader>
           <CardContent>
             {/* DEBUG: Inspect data structure */}
-            <pre className="text-xs bg-slate-950 text-white p-4 rounded overflow-auto max-h-40 mb-4">
+            {/* <pre className="text-xs bg-slate-950 text-white p-4 rounded overflow-auto max-h-40 mb-4">
               {JSON.stringify(brevoAccountDomains, null, 2)}
-            </pre>
+            </pre> */}
             {loadingAccountData ? (
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
