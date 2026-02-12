@@ -1326,7 +1326,7 @@ export default function BrevoSettingsPage() {
               )}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-scroll">
               <p className="text-sm font-medium">DNS Records</p>
               
               <DnsRecordCard
@@ -1370,10 +1370,10 @@ export default function BrevoSettingsPage() {
               />
 
               {!state.configDomain?.dnsRecords?.dkimRecord && 
-               !state.configDomain?.dnsRecords?.dkim1Record && 
-               !state.configDomain?.dnsRecords?.dkim2Record && 
-               !state.configDomain?.dnsRecords?.brevoCode && 
-               !state.configDomain?.dnsRecords?.dmarc_record && (
+                !state.configDomain?.dnsRecords?.dkim1Record && 
+                !state.configDomain?.dnsRecords?.dkim2Record && 
+                !state.configDomain?.dnsRecords?.brevoCode && 
+                !state.configDomain?.dnsRecords?.dmarc_record && (
                 <div className="text-center py-8">
                   <p className="text-sm text-muted-foreground mb-4">
                     No DNS records available yet.
