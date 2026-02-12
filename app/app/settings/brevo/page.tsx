@@ -625,7 +625,7 @@ export default function BrevoSettingsPage() {
   return (
     <div className="space-y-6">
       {/* Connection Status Card */}
-      <Card>
+      <Card className="flex flex-col md:flex-row items-center justify-between">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="w-5 h-5" />
@@ -1289,8 +1289,8 @@ export default function BrevoSettingsPage() {
         open={dialogs.dnsConfig} 
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, dnsConfig: open }))}
       >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Settings className="w-5 h-5" />
               DNS Configuration
@@ -1300,103 +1300,105 @@ export default function BrevoSettingsPage() {
             </DialogDescription>
           </DialogHeader>
           
-          {loading.configDialog ? (
-            <div className="space-y-4 py-8">
-              <Skeleton className="h-12 w-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-              </div>
-            </div>
-          ) : (
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <span className="text-sm font-medium">Domain Status</span>
-              {state.configDomain?.authenticated ? (
-                <Badge className="bg-green-500/10 text-green-600 border-green-200">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Authenticated
-                </Badge>
-              ) : (
-                <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-200">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  Pending Verification
-                </Badge>
-              )}
-            </div>
-
-            <div className="space-y-3 overflow-y-scroll">
-              <p className="text-sm font-medium">DNS Records</p>
-              
-              <DnsRecordCard
-                record={state.configDomain?.dnsRecords?.dkim1Record || null}
-                title="DKIM Record 1"
-                type="CNAME"
-                recordId="dkim1"
-                copiedRecord={copiedRecord}
-                onCopyHost={() => copyToClipboard(state.configDomain!.dnsRecords!.dkim1Record!.host, 'dkim1-host')}
-                onCopyValue={() => copyToClipboard(state.configDomain!.dnsRecords!.dkim1Record!.value, 'dkim1-value')}
-              />
-
-              <DnsRecordCard
-                record={state.configDomain?.dnsRecords?.dkim2Record || null}
-                title="DKIM Record 2"
-                type="CNAME"
-                recordId="dkim2"
-                copiedRecord={copiedRecord}
-                onCopyHost={() => copyToClipboard(state.configDomain!.dnsRecords!.dkim2Record!.host, 'dkim2-host')}
-                onCopyValue={() => copyToClipboard(state.configDomain!.dnsRecords!.dkim2Record!.value, 'dkim2-value')}
-              />
-
-              <DnsRecordCard
-                record={state.configDomain?.dnsRecords?.brevoCode || null}
-                title="Brevo Code"
-                type="TXT"
-                recordId="brevo"
-                copiedRecord={copiedRecord}
-                onCopyHost={() => copyToClipboard(state.configDomain!.dnsRecords!.brevoCode!.host, 'brevo-host')}
-                onCopyValue={() => copyToClipboard(state.configDomain!.dnsRecords!.brevoCode!.value, 'brevo-value')}
-              />
-
-              <DnsRecordCard
-                record={state.configDomain?.dnsRecords?.dmarc_record || null}
-                title="DMARC Record"
-                type="TXT"
-                recordId="dmarc"
-                copiedRecord={copiedRecord}
-                onCopyHost={() => copyToClipboard(state.configDomain!.dnsRecords!.dmarc_record!.host, 'dmarc-host')}
-                onCopyValue={() => copyToClipboard(state.configDomain!.dnsRecords!.dmarc_record!.value, 'dmarc-value')}
-              />
-
-              {!state.configDomain?.dnsRecords?.dkimRecord && 
-                !state.configDomain?.dnsRecords?.dkim1Record && 
-                !state.configDomain?.dnsRecords?.dkim2Record && 
-                !state.configDomain?.dnsRecords?.brevoCode && 
-                !state.configDomain?.dnsRecords?.dmarc_record && (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    No DNS records available yet.
-                  </p>
-                  <Button variant="outline" onClick={checkDomainConfig}>
-                    Fetch DNS Records
-                  </Button>
+          <div className="flex-1 overflow-y-auto min-h-0 p-6 pt-4">
+            {loading.configDialog ? (
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <span className="text-sm font-medium">Domain Status</span>
+                  {state.configDomain?.authenticated ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-200">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Authenticated
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-200">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      Pending Verification
+                    </Badge>
+                  )}
+                </div>
 
-            {!state.configDomain?.authenticated && (
-              <div className="flex items-start gap-2 p-3 bg-blue-500/10 rounded-lg text-sm">
-                <AlertTriangle className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                <p className="text-blue-700 dark:text-blue-400">
-                  Add the DNS records above to your domain provider. Verification can take up to 48 hours.
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">DNS Records</p>
+                  
+                  <DnsRecordCard
+                    record={state.configDomain?.dnsRecords?.dkim1Record || null}
+                    title="DKIM Record 1"
+                    type="CNAME"
+                    recordId="dkim1"
+                    copiedRecord={copiedRecord}
+                    onCopyHost={() => copyToClipboard(state.configDomain!.dnsRecords!.dkim1Record!.host, 'dkim1-host')}
+                    onCopyValue={() => copyToClipboard(state.configDomain!.dnsRecords!.dkim1Record!.value, 'dkim1-value')}
+                  />
+
+                  <DnsRecordCard
+                    record={state.configDomain?.dnsRecords?.dkim2Record || null}
+                    title="DKIM Record 2"
+                    type="CNAME"
+                    recordId="dkim2"
+                    copiedRecord={copiedRecord}
+                    onCopyHost={() => copyToClipboard(state.configDomain!.dnsRecords!.dkim2Record!.host, 'dkim2-host')}
+                    onCopyValue={() => copyToClipboard(state.configDomain!.dnsRecords!.dkim2Record!.value, 'dkim2-value')}
+                  />
+
+                  <DnsRecordCard
+                    record={state.configDomain?.dnsRecords?.brevoCode || null}
+                    title="Brevo Code"
+                    type="TXT"
+                    recordId="brevo"
+                    copiedRecord={copiedRecord}
+                    onCopyHost={() => copyToClipboard(state.configDomain!.dnsRecords!.brevoCode!.host, 'brevo-host')}
+                    onCopyValue={() => copyToClipboard(state.configDomain!.dnsRecords!.brevoCode!.value, 'brevo-value')}
+                  />
+
+                  <DnsRecordCard
+                    record={state.configDomain?.dnsRecords?.dmarc_record || null}
+                    title="DMARC Record"
+                    type="TXT"
+                    recordId="dmarc"
+                    copiedRecord={copiedRecord}
+                    onCopyHost={() => copyToClipboard(state.configDomain!.dnsRecords!.dmarc_record!.host, 'dmarc-host')}
+                    onCopyValue={() => copyToClipboard(state.configDomain!.dnsRecords!.dmarc_record!.value, 'dmarc-value')}
+                  />
+
+                  {!state.configDomain?.dnsRecords?.dkimRecord && 
+                    !state.configDomain?.dnsRecords?.dkim1Record && 
+                    !state.configDomain?.dnsRecords?.dkim2Record && 
+                    !state.configDomain?.dnsRecords?.brevoCode && 
+                    !state.configDomain?.dnsRecords?.dmarc_record && (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        No DNS records available yet.
+                      </p>
+                      <Button variant="outline" onClick={checkDomainConfig}>
+                        Fetch DNS Records
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {!state.configDomain?.authenticated && (
+                  <div className="flex items-start gap-2 p-3 bg-blue-500/10 rounded-lg text-sm">
+                    <AlertTriangle className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                    <p className="text-blue-700 dark:text-blue-400">
+                      Add the DNS records above to your domain provider. Verification can take up to 48 hours.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
-          )}
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="p-6 pt-4 border-t shrink-0 flex-col sm:flex-row gap-2">
             <Button 
               variant="outline" 
               onClick={() => setDialogs(prev => ({ ...prev, dnsConfig: false }))}
