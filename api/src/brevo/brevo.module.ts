@@ -24,6 +24,6 @@ import { UsersModule } from '../users/users.module.js';
     BrevoApiService,
     DomainVerificationJob,
   ],
-  exports: [BrevoService, BrevoRepository],
+  exports: [BrevoService, BrevoRepository, BrevoApiService],
 })
 export class BrevoModule {}

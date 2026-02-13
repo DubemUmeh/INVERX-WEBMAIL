@@ -30,18 +30,57 @@ export class MailService {
     private brevoService: BrevoService,
   ) {}
 
+  /**
+   * Helper to get all email addresses associated with the user:
+   * 1. Primary account email
+   * 2. Verified Domain addresses
+   * 3. Configured SMTP sender emails
+   * 4. Active Brevo sender emails
+   */
+  private async getAllUserEmails(
+    userId: string,
+    accountId: string,
+    userEmail: string,
+  ): Promise<string[]> {
+    const [domainAddresses, smtpConfigs, brevoSenders] = await Promise.all([
+      this.domainsService.getAllAddresses(accountId),
+      this.smtpService.getAllConfigs(userId),
+      this.brevoService.getBrevoAccountSenders(accountId),
+    ]);
+
+    const emails = new Set<string>([userEmail]);
+
+    // Add Domain Addresses
+    domainAddresses?.forEach((addr) => emails.add(addr.email.toLowerCase()));
+
+    // Add SMTP Sender Emails
+    smtpConfigs?.forEach((config) =>
+      emails.add(config.fromEmail.toLowerCase()),
+    );
+
+    // Add Brevo Sender Emails
+    brevoSenders?.forEach((sender) => {
+      if (sender.email) emails.add(sender.email.toLowerCase());
+    });
+
+    const emailList = Array.from(emails);
+    this.logger.log(
+      `[MailService] User ${userId} has ${emailList.length} associated emails: ${emailList.join(', ')}`,
+    );
+    return emailList;
+  }
+
   async getInbox(
     userId: string,
     accountId: string,
     userEmail: string,
     query: MailQueryDto,
   ) {
-    const domainAddresses =
-      await this.domainsService.getAllAddresses(accountId);
-    const userEmails = [
+    const userEmails = await this.getAllUserEmails(
+      userId,
+      accountId,
       userEmail,
-      ...(domainAddresses || []).map((addr) => addr.email),
-    ];
+    );
 
     const results = await this.mailRepository.findInbox(
       userId,
@@ -57,12 +96,11 @@ export class MailService {
     userEmail: string,
     query: MailQueryDto,
   ) {
-    const domainAddresses =
-      await this.domainsService.getAllAddresses(accountId);
-    const userEmails = [
+    const userEmails = await this.getAllUserEmails(
+      userId,
+      accountId,
       userEmail,
-      ...(domainAddresses || []).map((addr) => addr.email),
-    ];
+    );
 
     const results = await this.mailRepository.findSent(
       userId,

@@ -32,6 +32,9 @@ import { SmtpModule } from './smtp/smtp.module.js';
 import { BrevoModule } from './brevo/brevo.module.js';
 import { CloudflareModule } from './cloudflare/cloudflare.module.js';
 
+import { ThrottlerModule } from '@nestjs/throttler';
+import { NotificationsModule } from './notifications/notifications.module.js';
+
 @Module({
   imports: [
     // Configuration
@@ -39,6 +42,14 @@ import { CloudflareModule } from './cloudflare/cloudflare.module.js';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
+
+    // Rate Limiting
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
 
     // Scheduling (for cron jobs)
     ScheduleModule.forRoot(),
@@ -61,6 +72,7 @@ import { CloudflareModule } from './cloudflare/cloudflare.module.js';
     SmtpModule,
     BrevoModule,
     CloudflareModule,
+    NotificationsModule,
   ],
   providers: [
     // Global validation pipe

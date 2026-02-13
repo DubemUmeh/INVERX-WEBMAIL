@@ -625,13 +625,79 @@ export const webhookEvents = pgTable('webhook_events', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
+// Password Reset OTPs
+export const passwordResetOtps = pgTable(
+  'password_reset_otps',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => generateUuidv7()),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(), // Redundant but useful for quick lookups/audits
+    otpHash: varchar('otp_hash', { length: 255 }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    attempts: integer('attempts').default(0).notNull(),
+    maxAttempts: integer('max_attempts').default(3).notNull(),
+    lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    idempotencyKey: uuid('idempotency_key').unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [
+    index('idx_pwd_reset_user_expires').on(t.userId, t.expiresAt),
+    index('idx_pwd_reset_email').on(t.email),
+  ],
+);
+
+// Deleted Passwords (for reuse prevention)
+export const deletedPasswords = pgTable(
+  'deleted_passwords',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => generateUuidv7()),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    passwordHash: text('password_hash').notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }).defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [
+    index('idx_deleted_pw_user_created').on(t.userId, t.createdAt), // Efficient latest-5 check
+  ],
+);
+
+// Login Events (Security)
+export const loginEvents = pgTable(
+  'login_events',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => generateUuidv7()),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    ip: varchar('ip', { length: 45 }),
+    userAgent: text('user_agent'),
+    deviceFingerprint: varchar('device_fingerprint', { length: 255 }),
+    isNewDevice: boolean('is_new_device').default(false),
+    alertSent: boolean('alert_sent').default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (t) => [index('idx_login_events_user_created').on(t.userId, t.createdAt)],
+);
+
 // Waitlist Table
 export const waitlist = pgTable('waitlist', {
   id: uuid('id')
     .primaryKey()
     .$defaultFn(() => generateUuidv7()),
-  name: varchar('name', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }), // Made nullable if not always provided
   email: text('email').notNull().unique(),
+  notifiedAt: timestamp('notified_at', { withTimezone: true }), // Admin notified
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 

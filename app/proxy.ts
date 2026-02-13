@@ -6,7 +6,7 @@ export async function proxy(request: NextRequest) {
     request.cookies.get("__Secure-better-auth.session_token")?.value;
 
   if (!sessionToken) {
-    const authOrigin = process.env.AUTH_APP_ORIGIN;
+    const authOrigin = process.env.NEXT_PUBLIC_WEB_ORIGIN;
     const loginUrl = new URL("/login", authOrigin);
     loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);

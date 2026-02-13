@@ -36,7 +36,7 @@ export default function Page() {
             }
             throw new Error(data.error.message);
           }
-          window.location.href = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
+          window.location.replace(`${process.env.NEXT_PUBLIC_APP_ORIGIN}/dashboard`);
           return "Account created! Redirecting...";
         },
         error: (err) => {

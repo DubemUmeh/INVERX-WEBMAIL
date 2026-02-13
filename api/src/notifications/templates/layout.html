@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INVERX Notification</title>
+  <style>
+    /* Reset & Base */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f3f4f6;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: #111827;
+    }
+
+    table {
+      border-spacing: 0;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    td {
+      padding: 0;
+    }
+
+    img {
+      border: 0;
+      display: block;
+      max-width: 100%;
+    }
+
+    /* Container */
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+      margin-top: 40px;
+      margin-bottom: 40px;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* Header */
+    .header {
+      background-color: #ffffff;
+      padding: 40px 40px 20px 40px;
+      text-align: center;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .logo-img {
+      height: 40px;
+      width: auto;
+      margin: 0 auto;
+    }
+
+    /* Content */
+    .content {
+      padding: 40px;
+      color: #374151;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #111827;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin-bottom: 24px;
+    }
+
+    p {
+      margin-bottom: 16px;
+    }
+
+    strong {
+      color: #111827;
+      font-weight: 600;
+    }
+
+    /* Footer */
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px 40px;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .footer p {
+      margin: 5px 0;
+    }
+
+    .footer a {
+      color: #6b7280;
+      text-decoration: underline;
+      transition: color 0.15s ease;
+    }
+
+    .footer a:hover {
+      color: #374151;
+    }
+
+    /* Utilities */
+    .button {
+      display: inline-block;
+      padding: 14px 32px;
+      background-color: #111827;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-top: 24px;
+      margin-bottom: 24px;
+      text-align: center;
+      transition: background-color 0.15s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .button:hover {
+      background-color: #000000;
+    }
+
+    .code-box {
+      background-color: #f3f4f6;
+      padding: 24px;
+      border-radius: 8px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 32px;
+      letter-spacing: 8px;
+      text-align: center;
+      margin: 32px 0;
+      border: 1px solid #e5e7eb;
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .alert {
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      border-left-width: 4px;
+      border-left-style: solid;
+    }
+
+    .alert-warning {
+      background-color: #fffbeb;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+      border-left-color: #d97706;
+    }
+
+    .divider {
+      height: 1px;
+      background-color: #e5e7eb;
+      margin: 32px 0;
+      border: 0;
+    }
+
+    .text-sm {
+      font-size: 14px;
+    }
+
+    .text-muted {
+      color: #6b7280;
+    }
+
+    /* Mobile */
+    @media only screen and (max-width: 600px) {
+      .container {
+        width: 100% !important;
+        border-radius: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+        box-shadow: none;
+        border: none;
+      }
+
+      .content {
+        padding: 24px;
+      }
+
+      .header {
+        padding: 30px 24px 20px;
+      }
+
+      .code-box {
+        font-size: 24px;
+        letter-spacing: 4px;
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <table role="presentation">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <div class="container">
+          <!-- Header -->
+          <div class="header">
+            <a href="https://inverx.pro" style="text-decoration: none; display: inline-block;">
+              <!-- Use the public URL for the logo. Ensure this file exists in your public directory -->
+              <img src="https://inverx.pro/logo.png" alt="INVERX" class="logo-img" width="150">
+            </a>
+          </div>
+
+          <!-- Body Content -->
+          <div class="content">
+            {{{body}}}
+          </div>
+
+          <!-- Footer -->
+          <div class="footer">
+            <p>&copy; {{currentYear}} INVERX. All rights reserved.</p>
+            <p>
+              <a href="https://inverx.pro/privacy">Privacy Policy</a> &bull;
+              <a href="https://inverx.pro/terms">Terms of Service</a>
+            </p>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

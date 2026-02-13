@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { WaitlistController } from './waitlist.controller.js';
+import { JwtModule } from '@nestjs/jwt';
 import { WaitlistService } from './waitlist.service.js';
+import { WaitlistController } from './waitlist.controller.js';
 import { WaitlistRepository } from './waitlist.repository.js';
-import { DatabaseModule } from '../database/database.module.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 @Module({
-  imports: [DatabaseModule, AuthModule],
+  imports: [NotificationsModule, JwtModule.register({})],
   controllers: [WaitlistController],
   providers: [WaitlistService, WaitlistRepository],
   exports: [WaitlistService],

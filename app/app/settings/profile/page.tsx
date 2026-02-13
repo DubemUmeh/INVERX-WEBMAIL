@@ -56,7 +56,7 @@ export default function ProfilePage() {
       await signOut({
         fetchOptions: {
           onSuccess: () => {
-            window.location.href = `${process.env.AUTH_APP_ORIGIN}login/`;
+            window.location.replace(`${process.env.NEXT_PUBLIC_WEB_ORIGIN}/login`);
           },
         },
       });

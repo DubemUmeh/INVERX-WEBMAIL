@@ -3,6 +3,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BetterAuthController } from './better-auth.controller.js';
 import { AdminAuthController } from './admin-auth.controller.js';
+import { AuthController } from './auth.controller.js';
+import { PasswordResetService } from './password-reset.service.js';
+import { DatabaseModule } from '../database/database.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 // Helper to parse time string to seconds
 const parseTimeToSeconds = (time: string, defaultSeconds: number): number => {
@@ -42,8 +46,11 @@ const parseTimeToSeconds = (time: string, defaultSeconds: number): number => {
       },
       inject: [ConfigService],
     }),
+    DatabaseModule,
+    NotificationsModule,
   ],
-  controllers: [AdminAuthController, BetterAuthController],
+  controllers: [AdminAuthController, BetterAuthController, AuthController],
+  providers: [PasswordResetService],
   exports: [JwtModule],
 })
 export class AuthModule {}

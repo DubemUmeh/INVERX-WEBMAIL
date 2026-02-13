@@ -34,7 +34,7 @@ export default function Page() {
             }
             throw new Error(data.error.message);
           }
-          window.location.href = "https://app.inverx.pro/dashboard";
+          window.location.replace(`${process.env.NEXT_PUBLIC_APP_ORIGIN}/dashboard`);
           return "Login successful!";
         },
         error: (err) => {

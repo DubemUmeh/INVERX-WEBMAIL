@@ -52,11 +52,6 @@ const SidebarContent: React.FC<SidebarProps> = ({ setIsMobileMenuOpen, getLinkCl
         </Tooltip>
       );
     }
-    
-    // Original expanded link style, adapted slightly to match the "Nav" component structure if needed, 
-    // but here keeping it close to the original design while using the new structure if preferred.
-    // However, the original design had specific custom styling controlled by `getLinkClass`.
-    // We will use `getLinkClass` for the expanded state to maintain the "active" visual logic.
 
     return (
       <Link onClick={handleLinkClick} className={getLinkClass(href)} href={href}>
@@ -65,9 +60,9 @@ const SidebarContent: React.FC<SidebarProps> = ({ setIsMobileMenuOpen, getLinkCl
           <span className="text-sm font-medium">{title}</span>
         </div>
         {label && (
-            <span className={cn("text-xs font-bold px-1.5 py-0.5 rounded min-w-[20px] text-center", countColor ? countColor : "text-white/40")}>
-                {label}
-            </span>
+          <span className={cn("text-xs font-bold px-1.5 py-0.5 rounded min-w-[20px] text-center", countColor ? countColor : "text-white/40")}>
+              {label}
+          </span>
         )}
       </Link>
     );
@@ -91,26 +86,22 @@ const SidebarContent: React.FC<SidebarProps> = ({ setIsMobileMenuOpen, getLinkCl
         )}
         
       <div className={cn("flex flex-col gap-2", isCollapsed ? "items-center" : "pr-1 overflow-y-auto")}>
-        {/* Compose Button - Only show full button if not collapsed, otherwise maybe just an icon or nothing? 
-          The template usually puts action buttons differently or uses an icon.
-          Let's make it an icon if collapsed.
-        */}
         {isCollapsed ? (
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                  <Link href="/mails/compose" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90")}>
-                      <PenSquare className="h-4 w-4" />
-                      <span className="sr-only">Compose</span>
-                  </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Compose</TooltipContent>
-            </Tooltip>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+                <Link href="/mails/compose" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90")}>
+                    <PenSquare className="h-4 w-4" />
+                    <span className="sr-only">Compose</span>
+                </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Compose</TooltipContent>
+          </Tooltip>
         ) : (
-          <Link href="/mails/compose"
-              onClick={handleLinkClick}
-              className="flex items-center gap-3 py-3 px-2 mt-1 w-full bg-muted/80 text-webmail-primary hover:bg-muted transition-all font-bold rounded-lg shadow-sm group mb-4">
-              <PenSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              <span>Compose</span>
+        <Link href="/mails/compose"
+            onClick={handleLinkClick}
+            className="flex items-center gap-3 py-3 px-2 mt-1 w-full bg-muted/80 text-webmail-primary hover:bg-muted transition-all font-bold rounded-lg shadow-sm group mb-4">
+            <PenSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span>Compose</span>
           </Link>
         )}
 

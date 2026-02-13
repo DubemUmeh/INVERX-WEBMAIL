@@ -15,7 +15,7 @@ export default function Page() {
         router.push("/dashboard");
       } else {
         // Redirection to login is handled by middleware for protected routes,
-        window.location.href = `${process.env.AUTH_APP_ORIGIN}login/`;
+        window.location.replace(`${process.env.NEXT_PUBLIC_WEB_ORIGIN}login/`);
       }
     }
   }, [session, isPending, router]);
