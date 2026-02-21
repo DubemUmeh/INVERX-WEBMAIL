@@ -37,7 +37,7 @@ export default function Page() {
   }, [])
 
   return (
-    <main className="flex-1 flex justify-center py-20 px-4 md:px-10">
+    <main className="flex-1 flex justify-center py-20 px-4 md:px-10 bg-background">
       <div className="flex flex-col lg:flex-row max-w-[1200px] w-full gap-12">
         {/* <!-- Sidebar Navigation (Sticky on Desktop) --> */}
         <aside className="hidden lg:block w-64 shrink-0 relative">

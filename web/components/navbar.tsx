@@ -104,7 +104,10 @@ export default function Navbar() {
                   </Link>
                 ))}
                 <div className="pt-2">
-                  <Link href='/waitlists' className="w-full flex h-12 items-center justify-center px-5 rounded-xl border border-gray-200 text-base font-semibold text-primary bg-blue-200/70 hover:bg-blue-200/50 transition-colors cursor-pointer shadow-sm">
+                  <Link 
+                    href='/waitlists' 
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex h-12 items-center justify-center px-5 rounded-xl border border-gray-200 text-base font-semibold text-primary bg-blue-200/70 hover:bg-blue-200/50 transition-colors cursor-pointer shadow-sm">
                     Get Started
                   </Link>
                 </div>

@@ -13,7 +13,7 @@ export const metadata = constructMetadata({
 
 export default function Page() {
   return (
-    <main className="flex flex-1 justify-center py-5 px-4 sm:px-6 lg:px-40">
+    <main className="flex flex-1 justify-center py-5 px-4 sm:px-6 lg:px-40 bg-background">
       <section className="flex flex-col max-w-[960px] flex-1 w-full gap-8">
         <ResHero />
         <Migration />

@@ -13,7 +13,7 @@ export const metadata = constructMetadata({
 
 export default function Page() {
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden bg-background">
       <main className="flex-1">
         <PricingHero />
         <FeatureComparison />

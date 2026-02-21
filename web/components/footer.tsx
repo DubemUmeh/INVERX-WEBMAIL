@@ -23,10 +23,10 @@ export default function Footer() {
           <div>
             <h4 className="font-bold mb-4 text-sm tracking-wider uppercase text-neutral-500">Product</h4>
             <ul className="space-y-3 text-sm text-neutral-300">
-              <li><a className="hover:text-white transition-colors" href="#">Features</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">Pricing</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">Download</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">Changelog</a></li>
+              <li><Link className="hover:text-white transition-colors" href="/teams">Teams</Link></li>
+              <li><Link className="hover:text-white transition-colors" href="/pricing">Pricing</Link></li>
+              {/* <li><Link className="hover:text-white transition-colors" href="#">Download</Link></li> */}
+              {/* <li><Link className="hover:text-white transition-colors" href="#">Changelog</Link></li> */}
             </ul>
           </div>
           <div>
@@ -34,7 +34,7 @@ export default function Footer() {
             <ul className="space-y-3 text-sm text-neutral-300">
               <li><Link href='/about' className="hover:text-white transition-colors">About</Link></li>
               <li><Link href='/blog' className="hover:text-white transition-colors">Blog</Link></li>
-              <li><Link href='/careers' className="hover:text-white transition-colors">Careers</Link></li>
+              <li><Link href='/security' className="hover:text-white transition-colors">Security</Link></li>
               <li><Link href='/contact' className="hover:text-white transition-colors">Contact</Link></li>
             </ul>
           </div>
@@ -44,17 +44,17 @@ export default function Footer() {
               <li><Link className="hover:text-white transition-colors" href="/privacy-policy">Privacy Policy</Link></li>
               <li><Link className="hover:text-white transition-colors" href="/terms">Terms of Service</Link></li>
               <li><Link className="hover:text-white transition-colors" href="/security">Security</Link></li>
-              <li><Link className="hover:text-white transition-colors" href="/gdpr">GDPR</Link></li>
+              {/* <li><Link className="hover:text-white transition-colors" href="/gdpr">GDPR</Link></li> */}
             </ul>
           </div>
         </div>
         <div
           className="pt-8 border-t border-neutral-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-neutral-500">
-          <p>© 2026 Inverx Inc. All rights reserved.</p>
+          <p>© 2026 Inverx Webmail. All rights reserved.</p>
           <div className="flex gap-6">
-            <a className="hover:text-white transition-colors" href="#">Twitter</a>
-            <a className="hover:text-white transition-colors" href="#">GitHub</a>
-            <a className="hover:text-white transition-colors" href="#">LinkedIn</a>
+            <a className="hover:text-white transition-colors" target="_blank" href="https://x.com/dubem_umeh">Twitter</a>
+            <a className="hover:text-white transition-colors" target="_blank" href="https://github.com/dubemUmeh">GitHub</a>
+            {/* <a className="hover:text-white transition-colors" href="#">LinkedIn</a> */}
           </div>
         </div>
       </div>
