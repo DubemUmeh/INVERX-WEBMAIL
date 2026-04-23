@@ -1,4 +1,6 @@
 import { constructMetadata } from "@/lib/seo";
+import { Suspense } from "react";
+import Page from "./page";
 
 export const metadata = constructMetadata({
   title: "Login | INVERX",
@@ -6,6 +8,6 @@ export const metadata = constructMetadata({
   canonicalUrl: "https://inverx.pro/login",
 });
 
-export default function LoginLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+export default function LoginLayout() {
+  return <Suspense><Page /></Suspense>;
 }
