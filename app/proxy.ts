@@ -6,9 +6,20 @@ export async function proxy(request: NextRequest) {
     request.cookies.get("__Secure-better-auth.session_token")?.value;
 
   if (!sessionToken) {
-    const authOrigin = process.env.NEXT_PUBLIC_WEB_ORIGIN;
+    const configuredOrigin = process.env.NEXT_PUBLIC_WEB_ORIGIN;
+
+    let authOrigin = request.nextUrl.origin;
+    if (configuredOrigin) {
+      try {
+        authOrigin = new URL(configuredOrigin).origin;
+      } catch {
+        authOrigin = request.nextUrl.origin;
+      }
+    }
+
     const loginUrl = new URL("/login", authOrigin);
-    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    const redirectTarget = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+    loginUrl.searchParams.set("redirect", redirectTarget);
     return NextResponse.redirect(loginUrl);
   }
 
