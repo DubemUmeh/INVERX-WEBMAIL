@@ -6,16 +6,26 @@ import { db } from '../database/drizzle.js';
 import * as schema from '../database/schema/index.js';
 import { uuidv7 } from 'uuidv7';
 
+const isProd = process.env.NODE_ENV === 'production';
+
+// Build trusted origins - must include all frontend domains for cross-domain auth
 const trustedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
-  : ([process.env.WEB_URL, process.env.APP_URL].filter(Boolean) as string[]);
+  : [
+      process.env.WEB_URL,
+      process.env.APP_URL,
+      process.env.NEXT_PUBLIC_WEB_ORIGIN,
+      process.env.NEXT_PUBLIC_APP_ORIGIN,
+      'https://inverx.pro',
+      'https://www.inverx.pro',
+      'https://app.inverx.pro',
+    ]
+      .filter(Boolean)
+      .map((url) => String(url).trim()) as string[];
 
 console.log('[Better Auth Init] baseURL:', process.env.BETTER_AUTH_URL);
 console.log('[Better Auth Init] trustedOrigins:', trustedOrigins);
-console.log('[Better Auth Init] CORS_ORIGIN env:', process.env.CORS_ORIGIN);
-
-// check the state of the NODE environment
-const isProd = process.env.NODE_ENV === 'production';
+console.log('[Better Auth Init] NODE_ENV:', process.env.NODE_ENV);
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -24,12 +34,11 @@ export const auth = betterAuth({
       generateId: () => uuidv7(),
     },
     defaultCookieAttributes: {
-      ...(process.env.NODE_ENV === 'production' && {
-        domain: process.env.COOKIE_DOMAIN ?? '.inverx.pro',
-        path: '/',
-      }), // Share cookies across subdomains
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      secure: process.env.NODE_ENV === 'production', // HTTPS only
+      // Force subdomain cookie for production to share across inverx.pro and app.inverx.pro
+      domain: isProd ? '.inverx.pro' : undefined,
+      path: '/',
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
     },
   },
 
