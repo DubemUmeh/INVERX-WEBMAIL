@@ -23,7 +23,7 @@ export async function configureApp(app: INestApplication) {
   });
 
   // Fix Set-Cookie domain for cross-subdomain access in production
-  if (process.env.NODE_ENV === 'production') {
+/*  if (process.env.NODE_ENV === 'production') {
     const httpAdapter = app.getHttpAdapter();
     const expressApp = httpAdapter.getInstance();
 
@@ -47,7 +47,7 @@ export async function configureApp(app: INestApplication) {
       };
       next();
     });
-  }
+  } */
 
   // Set global prefix
   app.setGlobalPrefix('api');
