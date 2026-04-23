@@ -14,7 +14,7 @@ console.log('[Better Auth Init] baseURL:', process.env.BETTER_AUTH_URL);
 console.log('[Better Auth Init] trustedOrigins:', trustedOrigins);
 console.log('[Better Auth Init] CORS_ORIGIN env:', process.env.CORS_ORIGIN);
 
-// check the state of the NODE enviroment
+// check the state of the NODE environment
 const isProd = process.env.NODE_ENV === 'production';
 
 export const auth = betterAuth({
@@ -24,11 +24,12 @@ export const auth = betterAuth({
       generateId: () => uuidv7(),
     },
     defaultCookieAttributes: {
-      ...(isProd && {
-        domain: '.inverx.pro',
+      ...(process.env.NODE_ENV === 'production' && {
+        domain: process.env.COOKIE_DOMAIN ?? '.inverx.pro',
+        path: '/',
       }), // Share cookies across subdomains
-      sameSite: isProd ? 'none' : 'lax',
-      secure: isProd, // HTTPS only
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production', // HTTPS only
     },
   },
 
