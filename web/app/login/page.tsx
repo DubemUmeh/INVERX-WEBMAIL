@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function Page() {
-  const router = useRouter();
+  const appOrigin =
+    process.env.NEXT_PUBLIC_APP_ORIGIN ||
+    process.env.NEXT_PUBLIC_APP_ORIGINL ||
+    "https://app.inverx.pro";
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -34,7 +36,7 @@ export default function Page() {
             }
             throw new Error(data.error.message);
           }
-          window.location.replace(`${process.env.NEXT_PUBLIC_APP_ORIGIN}/dashboard`);
+          window.location.replace(`${appOrigin}/dashboard`);
           return "Login successful!";
         },
         error: (err) => {
@@ -196,4 +198,3 @@ export default function Page() {
     </main>
   );
 }
-
