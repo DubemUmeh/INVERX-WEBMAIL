@@ -8,6 +8,47 @@ import { uuidv7 } from 'uuidv7';
 
 const isProd = process.env.NODE_ENV === 'production';
 
+function resolveCookieDomain() {
+  const configuredDomain = process.env.AUTH_COOKIE_DOMAIN?.trim();
+  if (configuredDomain) return configuredDomain;
+
+  const baseUrl = process.env.BETTER_AUTH_URL?.trim();
+  if (!baseUrl) return undefined;
+
+  try {
+    const { hostname } = new URL(baseUrl);
+    if (
+      hostname === 'inverx.pro' ||
+      hostname === 'www.inverx.pro' ||
+      hostname.endsWith('.inverx.pro')
+    ) {
+      return '.inverx.pro';
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function resolveSecureCookie() {
+  const explicit = process.env.AUTH_COOKIE_SECURE?.trim().toLowerCase();
+  if (explicit === 'true') return true;
+  if (explicit === 'false') return false;
+
+  const baseUrl = process.env.BETTER_AUTH_URL?.trim();
+  if (!baseUrl) return isProd;
+
+  try {
+    return new URL(baseUrl).protocol === 'https:';
+  } catch {
+    return isProd;
+  }
+}
+
+const cookieDomain = resolveCookieDomain();
+const secureCookie = resolveSecureCookie();
+
 // Build trusted origins - must include all frontend domains for cross-domain auth
 const trustedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((url) => url.trim())
@@ -26,6 +67,8 @@ const trustedOrigins = process.env.CORS_ORIGIN
 console.log('[Better Auth Init] baseURL:', process.env.BETTER_AUTH_URL);
 console.log('[Better Auth Init] trustedOrigins:', trustedOrigins);
 console.log('[Better Auth Init] NODE_ENV:', process.env.NODE_ENV);
+console.log('[Better Auth Init] cookieDomain:', cookieDomain);
+console.log('[Better Auth Init] secureCookie:', secureCookie);
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -34,11 +77,12 @@ export const auth = betterAuth({
       generateId: () => uuidv7(),
     },
     defaultCookieAttributes: {
-      // Force subdomain cookie for production to share across inverx.pro and app.inverx.pro
-      domain: isProd ? '.inverx.pro' : undefined,
+      // Share session cookie across inverx.pro, www.inverx.pro, app.inverx.pro and api.inverx.pro
+      domain: cookieDomain,
       path: '/',
-      sameSite: isProd ? 'none' : 'lax',
-      secure: isProd,
+      // Subdomains are same-site; lax avoids unnecessary third-party cookie restrictions.
+      sameSite: 'lax',
+      secure: secureCookie,
     },
   },
 

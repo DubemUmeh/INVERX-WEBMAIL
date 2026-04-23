@@ -1,16 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function Page() {
+  const searchParams = useSearchParams();
   const appOrigin =
     process.env.NEXT_PUBLIC_APP_ORIGIN ||
     process.env.NEXT_PUBLIC_APP_ORIGINL ||
     "https://app.inverx.pro";
+  const redirectTarget = useMemo(() => {
+    const redirect = searchParams.get("redirect");
+    if (!redirect) return `${appOrigin}/dashboard`;
+
+    try {
+      const parsed = new URL(redirect);
+      const allowedHosts = ["app.inverx.pro", "inverx.pro", "www.inverx.pro"];
+      if (allowedHosts.includes(parsed.hostname)) {
+        return parsed.toString();
+      }
+    } catch {
+      // Ignore malformed redirect and fallback to dashboard
+    }
+
+    return `${appOrigin}/dashboard`;
+  }, [appOrigin, searchParams]);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -36,7 +54,7 @@ export default function Page() {
             }
             throw new Error(data.error.message);
           }
-          window.location.replace(`${appOrigin}/dashboard`);
+          window.location.replace(redirectTarget);
           return "Login successful!";
         },
         error: (err) => {
