@@ -7,11 +7,10 @@ import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-export default function Page() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const appOrigin =
     process.env.NEXT_PUBLIC_APP_ORIGIN ||
-    process.env.NEXT_PUBLIC_APP_ORIGINL ||
     "https://app.inverx.pro";
   const redirectTarget = useMemo(() => {
     const redirect = searchParams.get("redirect");
@@ -69,10 +68,10 @@ export default function Page() {
     <main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-neutral-950 pt-20 px-4">
       {/* Background Effects */}
       <div className="absolute inset-0 z-0 h-full w-full bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]"></div>
-      <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-neutral-700 to-transparent opacity-50"></div>
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-700 to-transparent opacity-50"></div>
       
       {/* Grid Pattern (Optional subtle texture) */}
-      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-size-[24px_24px]"></div>
+      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[length:24px_24px]"></div>
 
       <div className="z-10 w-full max-w-[440px] animate-in fade-in zoom-in-95 duration-500">
         <div className="relative rounded-2xl border border-neutral-800 bg-neutral-900/50 backdrop-blur-xl shadow-2xl overflow-hidden p-8">
@@ -95,7 +94,7 @@ export default function Page() {
                 Email
               </label>
               <input
-                className="flex w-full rounded-lg border border-neutral-800 bg-neutral-950/50 px-4 py-3 text-sm text-white placeholder-neutral-500 shadow-sm transition-colors focus:border-neutral-600 focus:outline-none focus:ring-1 focus:ring-neutral-600 hover:border-neutral-700"
+                className="flex w-full rounded-lg border border-neutral-800 bg-neutral-950/50 px-4 py-3 text-sm text-white placeholder-neutral-500 shadow-sm transition-colors focus:border-neutral-600 focus:outline-none"
                 id="email" 
                 placeholder="name@company.com" 
                 type="email"
@@ -117,7 +116,7 @@ export default function Page() {
               </div>
               <div className="relative">
                 <input
-                  className="flex w-full rounded-lg border border-neutral-800 bg-neutral-950/50 px-4 py-3 text-sm text-white placeholder-neutral-500 shadow-sm transition-colors focus:border-neutral-600 focus:outline-none focus:ring-1 focus:ring-neutral-600 hover:border-neutral-700 pr-10"
+                  className="flex w-full rounded-lg border border-neutral-800 bg-neutral-950/50 px-4 py-3 text-sm text-white placeholder-neutral-500 shadow-sm transition-colors focus:border-neutral-600 focus:outline-none"
                   id="password" 
                   placeholder="••••••••" 
                   type={showPassword ? "text" : "password"}
@@ -138,7 +137,7 @@ export default function Page() {
             {/* Submit Button */}
             <button
               disabled={loading}
-              className="mt-2 group relative w-full flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-white px-4 py-3 text-sm font-semibold text-neutral-950 shadow-[0_1px_15px_rgba(255,255,255,0.1)] transition-all hover:bg-neutral-200 hover:shadow-[0_1px_20px_rgba(255,255,255,0.15)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-2 group relative w-full flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-white px-4 py-3 text-sm font-semibold text-neutral-950 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading && <Loader2 className="animate-spin" size={16} />}
               {loading ? "Signing in..." : "Sign In"}
@@ -216,3 +215,9 @@ export default function Page() {
     </main>
   );
 }
+
+export default function Page() {
+  return (
+    <LoginForm />
+  );
+                }
