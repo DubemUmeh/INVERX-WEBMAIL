@@ -173,7 +173,7 @@ export const mails = [
 
 export type Mail = (typeof mails)[number]
 
-// refactor this to be used when a user selected email is set, mails,mesasges will be displayed, add 'all mailboxes' as well
+// refactor this to be used when a user selected email is set, mails, messages will be displayed, add 'all mailboxes' as well
 export const accounts = [
   {
     label: "Alicia Koch",
@@ -293,7 +293,7 @@ export const contacts = [
     email: "henry.turner@example.com",
   },
   {
-    name: "Scarlett Adams",
+    name: "Scarlet Adams",
     email: "scarlett.adams@example.com",
   },
 ]

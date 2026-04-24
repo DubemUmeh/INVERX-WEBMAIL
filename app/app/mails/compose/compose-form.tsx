@@ -381,7 +381,7 @@ export function ComposeForm() {
         <div className="flex-1 flex flex-col min-w-0">
           {/* Page Heading */}
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-webmail-primary dark:text-white tracking-tight">
+            <h1 className="text-3xl font-bold text-primary dark:text-white tracking-tight">
               New Message
             </h1>
             {status.success && (
@@ -422,7 +422,7 @@ export function ComposeForm() {
                           value={formState.fromEmail} 
                           onValueChange={(val) => setFormState(prev => ({ ...prev, fromEmail: val }))}
                         >
-                          <SelectTrigger className="w-auto border-none shadow-none p-0 h-auto bg-transparent focus:ring-0 text-webmail-primary dark:text-white font-medium text-xs md:text-sm gap-2">
+                          <SelectTrigger className="w-auto border-none shadow-none p-0 h-auto bg-transparent focus:ring-0 text-primary dark:text-white font-medium text-xs md:text-sm gap-2">
                             <SelectValue placeholder="Select email" />
                           </SelectTrigger>
                           <SelectContent>
@@ -508,7 +508,7 @@ export function ComposeForm() {
                       <div className="size-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
                         {getInitials(email)}
                       </div>
-                      <span className="text-sm text-webmail-primary dark:text-white">
+                      <span className="text-sm text-primary dark:text-white">
                         {email}
                       </span>
                       <button
@@ -520,7 +520,7 @@ export function ComposeForm() {
                     </div>
                   ))}
                   <input
-                    className="flex-1 min-w-[120px] bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-neutral-400 text-webmail-primary dark:text-white h-8 outline-none"
+                    className="flex-1 min-w-[120px] bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-neutral-400 text-primary dark:text-white h-8 outline-none"
                     placeholder="Add recipients..."
                     type="email"
                     value={toInput}
@@ -533,16 +533,16 @@ export function ComposeForm() {
                   <div className="ml-auto flex gap-3 text-sm text-neutral-500 font-medium">
                     <button
                       onClick={() => setShowCc(!showCc)}
-                      className={`hover:text-webmail-primary dark:hover:text-white transition-colors ${
-                        showCc ? "text-webmail-primary dark:text-white" : ""
+                      className={`hover:text-primary dark:hover:text-white transition-colors ${
+                        showCc ? "text-primary dark:text-white" : ""
                       }`}
                     >
                       Cc
                     </button>
                     <button
                       onClick={() => setShowBcc(!showBcc)}
-                      className={`hover:text-webmail-primary dark:hover:text-white transition-colors ${
-                        showBcc ? "text-webmail-primary dark:text-white" : ""
+                      className={`hover:text-primary dark:hover:text-white transition-colors ${
+                        showBcc ? "text-primary dark:text-white" : ""
                       }`}
                     >
                       Bcc
@@ -563,7 +563,7 @@ export function ComposeForm() {
                         key={email}
                         className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-full border border-neutral-200 dark:border-neutral-700"
                       >
-                        <span className="text-sm text-webmail-primary dark:text-white">
+                        <span className="text-sm text-primary dark:text-white">
                           {email}
                         </span>
                         <button
@@ -575,7 +575,7 @@ export function ComposeForm() {
                       </div>
                     ))}
                     <input
-                      className="flex-1 min-w-[120px] bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-neutral-400 text-webmail-primary dark:text-white h-8 outline-none"
+                      className="flex-1 min-w-[120px] bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-neutral-400 text-primary dark:text-white h-8 outline-none"
                       placeholder="Add Cc..."
                       type="email"
                       value={ccInput}
@@ -601,7 +601,7 @@ export function ComposeForm() {
                         key={email}
                         className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-full border border-neutral-200 dark:border-neutral-700"
                       >
-                        <span className="text-sm text-webmail-primary dark:text-white">
+                        <span className="text-sm text-primary dark:text-white">
                           {email}
                         </span>
                         <button
@@ -613,7 +613,7 @@ export function ComposeForm() {
                       </div>
                     ))}
                     <input
-                      className="flex-1 min-w-[120px] bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-neutral-400 text-webmail-primary dark:text-white h-8 outline-none"
+                      className="flex-1 min-w-[120px] bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-neutral-400 text-primary dark:text-white h-8 outline-none"
                       placeholder="Add Bcc..."
                       type="email"
                       value={bccInput}
@@ -635,7 +635,7 @@ export function ComposeForm() {
                   Subject
                 </label>
                 <input
-                  className="w-full bg-transparent border-none p-0 text-lg font-semibold focus:ring-0 placeholder:text-neutral-300 text-webmail-primary dark:text-white outline-none"
+                  className="w-full bg-transparent border-none p-0 text-lg font-semibold focus:ring-0 placeholder:text-neutral-300 text-primary dark:text-white outline-none"
                   type="text"
                   placeholder="Enter subject..."
                   value={formState.subject}
